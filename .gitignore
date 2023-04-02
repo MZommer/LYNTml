@@ -1,3 +1,13 @@
+# Songs folder
+input/
+output/
+
+# Module folder
+BlueStar/
+
+# IntlliJ Idea files
+.idea/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
