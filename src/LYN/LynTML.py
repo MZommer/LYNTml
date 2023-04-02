@@ -1,4 +1,4 @@
-from BinaryReader import BinaryReader
+from .BinaryReader import BinaryReader
 import shutil
 from io import BytesIO
 import xml.etree.ElementTree as ET

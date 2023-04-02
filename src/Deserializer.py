@@ -1,4 +1,4 @@
-from LynTML import LynTML
+from LYN.LynTML import LynTML
 try:
     import BlueStar
     BLUESTAR_AVAILABLE = True
