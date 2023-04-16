@@ -12,7 +12,7 @@ for file in os.listdir("./input"):
         print(file)
         tml = LynTML()
         try:
-            tml.Deserialize("./input/" + file)
+            tml.Deserialize("./input/" + file, True)
         except:
             pass
         if tml.CodeName != "":
