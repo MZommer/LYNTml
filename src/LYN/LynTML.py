@@ -108,7 +108,7 @@ class LynTML():
         }[key]
         # TODO: refactor so it uses .get
 
-    def Deserialize(self, path):
+    def Deserialize(self, path, parse=False):
         """A lot of unused values are just seeked since every read takes a lot"""
         self.binaryReader = BinaryReader("LITTLE", open(path, "rb"))
         self.binaryReader.fileStream.seek(4)
@@ -135,6 +135,7 @@ class LynTML():
         self.binaryReader.uint32()
         self.CodeName = self.binaryReader.string()
         self.codename = self.CodeName.lower()
+        if parse: return self
         self.binaryReader.fileStream.seek(Info_sizeOf - (self.binaryReader.fileStream.tell() - pos), 1)
         self.__parseVirtualStart()
         self.__parseNames()
