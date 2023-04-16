@@ -64,7 +64,7 @@ class BinaryReader:
 
     def string(self, isLYN=False):
         if not isLYN:
-            return self.fileStream.read(self.uint32()).strip(b"\x00").decode("utf-8", "backslashreplace")
+            return self.fileStream.read(self.uint32()).strip(b"\x00").decode("utf-8")
         size = self.ushort()
         isUnicode = self.ushort()
         if isUnicode:
@@ -75,4 +75,4 @@ class BinaryReader:
                     continue
                 arr[index] = bytearray.fromhex(i[:2]).decode() + i[2:]
             return "".join(arr)
-        return self.fileStream.read(size).replace(b"\x00", b"").decode("utf-8", "backslashreplace")
+        return self.fileStream.read(size).replace(b"\x00", b"").decode("utf-8")
