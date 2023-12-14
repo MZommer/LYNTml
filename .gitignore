@@ -1,6 +1,16 @@
 # Songs folder
-input/
-output/
+input/*
+output/*
+*.bin
+*.wog
+*.mat
+*.tml
+*.xml
+*.wav
+*.gesture
+*.lmc
+*.msm
+
 
 # Module folder
 BlueStar/
