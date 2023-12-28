@@ -45,7 +45,8 @@ class File:
         elif b"RIFF" in self.Data:
             self.Type = "wav"
         else:
-            self.Type = "bin"        
+            self.Type = "bin"
+        # TODO: Identify other datatypes    
     
     def __repr__(self) -> str:
         return f"File(ID={self.ID}, Type={self.Type} Size={self.Size}, Data=bytes[{len(self.Data)}])"
@@ -61,18 +62,20 @@ class Unpacker:
             self.FromStream(stream)
     
     def FromStream(self, stream: BytesIO) -> None:
-        binaryReader = BinaryReader("LITTLE", stream)
+        _reader = BinaryReader("LITTLE", stream)
         self.files = []
-        size = getBufferSize(binaryReader.fileStream)
+        size = getBufferSize(_reader.fileStream)
         
-        while binaryReader.tell() != size:
-            FileID = binaryReader.uint32()
+        while _reader.tell() != size:
+            FileID = _reader.uint32()
             if FileID == 0xDEAFBEEF: # b"\xEF\xBE\xAF\xDE" LE
                 # Old versions of the engine have this flag for identifying a file
-                FileID = binaryReader.uint32()
-            FileSize = binaryReader.uint32()
-            FileData = binaryReader.raw(FileSize)
+                FileID = _reader.uint32()
+            FileSize = _reader.uint32()
+            FileData = _reader.raw(FileSize)
             self.files.append(File(FileID, FileSize, FileData))
+            # TODO: update to a pointer system to avoid memory flood #
+            # But also involves in updating the API #
     
     def SaveAll(self, path: str) -> None:
         for idx, file in enumerate(self.files):
