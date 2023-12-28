@@ -16,6 +16,7 @@ def struct(func):
         try:
             ret = func(self, *args, **kwargs)
         except Exception as e:
+            #raise e
             # ADD ROLLBACK
             logger.error(f"Error while parsing struct {func.__name__} {e}")
         
@@ -179,8 +180,16 @@ class BinarySerializer:
         DefaultDuration = self._reader.uint32()
         SubdivisionsInBeat = self._reader.uint32()
         event = self.Timeline.databank.AddEvent(name, CreationId, SubdivisionsInBeat, DefaultDuration)
+        i = 0
+        flag = False
         while not self._reader.tell() >= struct_end:
+            i += 1
             paramName = self._reader.string()
+            if paramName == "Class":
+                flag = True
+            if flag:
+                self._reader.int32()
+            # TODO: Check whats this value
             paramType = "Int" # TODO: add handler with known param names
             DisplayInTimeline = 1
             DefaultValue = ""
