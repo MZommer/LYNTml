@@ -1,28 +1,41 @@
 import struct
+from queue import LifoQueue
+from dataclasses import dataclass
+from .Logger import logger
 
-
-# TODO: Update binary reader, using a (very) old version.
+@dataclass
+class StructInfo:
+   seed: int
+   sizeOf: int 
 
 class BinaryReader:
     def __init__(self, endianess, fileStream):
-        if endianess == "":
-            if struct.unpack(">I", fileStream.read(4))[0] == 1:
-                endianess = "BIG"
-            else:
-                endianess = "LITTLE"
+        self.stack = LifoQueue()
         self.parameterMarker = "<"
         if endianess == "BIG":
             self.parameterMarker = ">"
         self.endianess = endianess
         self.fileStream = fileStream
+    
+    def InitStruct(self):
+        seed = self.tell()
+        sizeOf = self.uint32()
+        info = self.PutStruct(seed, sizeOf)
+        return info
+    
+    def PutStruct(self, seed, sizeOf):
+        info = StructInfo(seed, sizeOf)
+        self.stack.put(info)
+        return info
+    
+    def GetStruct(self):
+        return self.stack.get()
+    
+    def vector(self, len=None):
+        return [self.float() for _ in range(len or self.uint32())]
 
-    def vector(self, len):
-        return [self.float() for _ in range(len)]
-
-    def array(self, function, legacy=False):
-        if legacy:
-            return [function(legacy) for _ in range(self.int32())]
-        return [function() for _ in range(self.int32())]
+    def array(self, function):
+        return [function() for _ in range(self.uint32())]
 
     def uint64(self):
         return struct.unpack(self.parameterMarker + "Q", self.fileStream.read(8))[0]
@@ -76,3 +89,27 @@ class BinaryReader:
                 arr[index] = bytearray.fromhex(i[:2]).decode() + i[2:]
             return "".join(arr)
         return self.fileStream.read(size).replace(b"\x00", b"").decode("utf-8")
+    
+    def raw(self, size):
+        return self.fileStream.read(size)
+    
+    def tell(self):
+        return self.fileStream.tell()
+    
+    def seek(self, *args, **kwargs):
+        self.fileStream.seek(*args, **kwargs)
+    
+    def close(self):
+        self.fileStream.close()
+    
+    def __del__(self):
+        self.close()
+    
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+    
+    def __repr__(self):
+        return f"BinaryReader(endianess={self.endianess}, pptr={self.tell()})"
