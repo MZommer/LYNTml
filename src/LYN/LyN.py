@@ -11,6 +11,10 @@ class LyN:
         
         header, table, *files = unpacker.files
         
+        os.makedirs(path.join(output, "bin"), exist_ok=True)
+        for idx, file in enumerate(unpacker.files):
+            unpacker.SaveFile(file, path.join(output, "bin", f"{idx}_{file.ID}.{file.Type}"))
+        
         classifiers_id, timeline_id = TableReader(table.Data)
         
         classifiers = tuple(file for file in files if file.ID in classifiers_id)
@@ -27,6 +31,7 @@ class LyN:
             with open(path.join(output, "classifiers", f"{move.name}_{Timeline.general.Song}.{classifier.Type}".lower()), "wb") as f:
                 f.write(classifier.Data)
         
-        # Missing convert to BlueStar
+        return Timeline
+        
 
         
