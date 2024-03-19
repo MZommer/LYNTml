@@ -11,8 +11,8 @@ class Timeline(ET.Element):
     
     def __init__(self) -> None:
         super().__init__("JustDanceToolLD", attrib={
-            "version": "8.0",
-            "MajorVersion": "8",
+            "version": "0.0",
+            "MajorVersion": "0",
             "MinorVersion": "0",
             "LastEditorUsed": "128"
         })
