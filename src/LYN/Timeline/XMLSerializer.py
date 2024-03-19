@@ -21,7 +21,7 @@ def tree2dict(tree: ET.Element) -> dict:
     return result
 
 class XMLSerializer:
-    Timeline: Timeline
+    # Timeline: Timeline
     tree: ET.ElementTree
     def __init__(self) -> None:
         self.Timeline = Timeline()
