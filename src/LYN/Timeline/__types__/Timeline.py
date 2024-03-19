@@ -36,3 +36,39 @@ class Timeline(ET.Element):
             tree = ET.ElementTree(self)
             ET.indent(tree, space="    ")
             tree.write(f, encoding='utf-8', xml_declaration=True, method="xml")
+    
+    @property
+    def version(self) -> float:
+        return self._version
+    
+    @version.setter
+    def version(self, value: float) -> None:
+        self._version = value
+        self.attrib["version"] = str(value)
+    
+    @property
+    def MajorVersion(self) -> int:
+        return self._MajorVersion
+    
+    @MajorVersion.setter
+    def MajorVersion(self, value: int) -> None:
+        self._MajorVersion = value
+        self.attrib["MajorVersion"] = str(value)
+    
+    @property
+    def MinorVersion(self) -> int:
+        return self._MinorVersion
+    
+    @MinorVersion.setter
+    def MinorVersion(self, value: int) -> None:
+        self._MinorVersion = value
+        self.attrib["MinorVersion"] = str(value)
+    
+    @property
+    def LastEditorUsed(self) -> int:
+        return self._LastEditorUsed
+    
+    @LastEditorUsed.setter
+    def LastEditorUsed(self, value: int) -> None:
+        self._LastEditorUsed = value
+        self.attrib["LastEditorUsed"] = str(value)
