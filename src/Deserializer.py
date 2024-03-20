@@ -1,4 +1,5 @@
-from LYN.LynTML import LynTML
+from LYN.LyN import LyN
+from LYN.BlueStarConverter import BlueStarConverter
 try:
     import BlueStar
     BLUESTAR_AVAILABLE = True
@@ -7,41 +8,60 @@ except ImportError:
     print("BlueStar module is not available, please install or add to the folder.")
 import os
 import json
+import shutil
 
 os.makedirs("input", exist_ok=True)
 os.makedirs("output", exist_ok=True)
 
 for file in os.listdir("./input"):
     if os.path.isfile("./input/" + file):
+        name = file.split(".")[0]
+        os.makedirs("output/" + name, exist_ok=True)
+        
         print(file)
-        tml = LynTML()
-        tml.Deserialize("./input/" + file)
-        os.makedirs(f"./output/{tml.CodeName}", exist_ok=True)
-        MainJson = tml.makeJDNJSON()
-        json.dump(MainJson,
-                  open(f"./output/{tml.CodeName}/{tml.CodeName}.json", "w", encoding="utf-8"),
+        
+        timeline = LyN.UnpackAndDecode("./input/" + file, "output/"+name)
+        
+        bluestar = BlueStarConverter(timeline)
+                
+        os.makedirs(f"./output/{timeline.general.Song}", exist_ok=True)
+
+        json.dump(bluestar.main,
+                  open(f"./output/{timeline.general.Song}/{timeline.general.Song}.json", "w", encoding="utf-8"),
                   ensure_ascii=False)
-        for index, move in enumerate(tml.Moves):
+        for index, move in enumerate(bluestar.moves):
             if move:
-                json.dump(move, open(f"./output/{tml.CodeName}/{tml.CodeName}_Moves{index}.json", "w"))
-        for index, move in enumerate(tml.KinectMoves):
+                json.dump(move, open(f"./output/{timeline.general.Song}/{timeline.general.Song}_Moves{index}.json", "w"))
+        for index, move in enumerate(bluestar.kinectmoves):
             if move:
-                json.dump(move, open(f"./output/{tml.CodeName}/{tml.CodeName}_KinectMoves{index}.json", "w"))
-        os.makedirs(f"output/{tml.CodeName}/pictos", exist_ok=True)
-        os.makedirs(f"output/{tml.CodeName}/classifiers", exist_ok=True)
-        os.makedirs(f"output/{tml.CodeName}/classifiers/wiiu", exist_ok=True)
-        tml.generatePlaceHolderPictos(f"output/{tml.CodeName}/pictos")
-        tml.generatePlaceHolderClassifiers(f"output/{tml.CodeName}/classifiers/wiiu")
-        tml.saveClassifiers(f"output/{tml.CodeName}/classifiers")
+                json.dump(move, open(f"./output/{timeline.general.Song}/{timeline.general.Song}_KinectMoves{index}.json", "w"))
+        
+        os.makedirs(f"output/{timeline.general.Song}/pictos", exist_ok=True)
+        os.makedirs(f"output/{timeline.general.Song}/classifiers/wiiu", exist_ok=True)
+        if timeline.databank.GestureBank:
+            os.makedirs(f"output/{timeline.general.Song}/classifiers/x360", exist_ok=True)
+            os.makedirs(f"output/{timeline.general.Song}/classifiers/orbis", exist_ok=True)
+            os.makedirs(f"output/{timeline.general.Song}/classifiers/durango", exist_ok=True)
+            os.makedirs(f"output/{timeline.general.Song}/classifiers/posenet", exist_ok=True)
+        
+        for picto in timeline.databank.PictoBank:
+            shutil.copy(f"assets/Pictogram_{bluestar.main.get('NumCoach', 1)}.png", f"output/{timeline.general.Song}/pictos/{picto.name}.png")
+        
+        for move in timeline.databank.MoveBank:
+            shutil.copy("assets/Generic_generic.msm", f"output/{timeline.general.Song}/classifiers/wiiu/{timeline.general.Song.lower()}_{move.name}.msm")
+        
+        for gesture in timeline.databank.GestureBank:
+            pass # TODO: add generic gesture
+        
         if BLUESTAR_AVAILABLE:
-            os.makedirs(f"output/{tml.CodeName}/UAF", exist_ok=True)
-            song = BlueStar.Song(**MainJson, moves=tml.Moves, kinectMoves=tml.KinectMoves)
+            os.makedirs(f"output/{timeline.general.Song}/UAF", exist_ok=True)
+            song = BlueStar.Song(**bluestar.main, moves=bluestar.Moves, kinectMoves=bluestar.KinectMoves)
             song.makeUAF()
-            UAF_PATH = f"output/{tml.CodeName}/UAF/{MainJson['MapName']}"
+            UAF_PATH = f"output/{timeline.general.Song}/UAF/{bluestar.main['MapName']}"
             os.makedirs(f"{UAF_PATH}/timeline", exist_ok=True)
             os.makedirs(f"{UAF_PATH}/audio", exist_ok=True)
             os.makedirs(f"{UAF_PATH}/cinematics", exist_ok=True)
-            mapname = MainJson['MapName'].lower()
+            mapname = bluestar.main['MapName'].lower()
             json.dump(song.tml_dance,
                       open(f"{UAF_PATH}/timeline/{mapname}_tml_dance.dtape.ckd", "w", encoding="utf-8"),
                       ensure_ascii=False)
