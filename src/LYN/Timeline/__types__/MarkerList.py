@@ -14,6 +14,22 @@ class Marker(ET.Element):
     
     def __repr__(self) -> str:
         return str(self)
+
+    @property
+    def position(self) -> int:
+        return int(self.attrib["position"])
+    
+    @property
+    def name(self) -> str:
+        return self.attrib["name"]
+    
+    @property
+    def sampleposition(self) -> int:
+        return int(self.attrib["sampleposition"])
+    
+    @property
+    def date(self) -> float:
+        return float(self.attrib["date"])
     
 class MarkerList(ET.Element):
     def __init__(self) -> None:
