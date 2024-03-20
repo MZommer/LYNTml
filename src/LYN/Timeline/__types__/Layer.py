@@ -80,6 +80,8 @@ class MoveInstance(Instance):
         if GoldMove:
             self.GoldMoveElement = ET.SubElement(self, "GoldMove")
             self.GoldMove = GoldMove
+        else:
+            self._GoldMove = False
     
     @property
     def duration(self) -> float:
