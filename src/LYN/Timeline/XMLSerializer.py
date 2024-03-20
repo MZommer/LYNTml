@@ -65,7 +65,7 @@ class XMLSerializer:
                 self.__loadEventsBank(child)
             elif child.tag == "LyricsBank":
                 pass
-            elif child.tag == "GesturesBank":
+            elif child.tag == "GestureBank":
                 pass
             else:
                 raise Exception(f"Unknown bank: {child.tag}")
