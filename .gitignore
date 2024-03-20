@@ -1,6 +1,6 @@
 # Songs folder
-input/*
-output/*
+src/input/*
+src/output/*
 *.bin
 *.wog
 *.mat
@@ -11,9 +11,8 @@ output/*
 *.lmc
 *.msm
 
-
 # Module folder
-BlueStar/
+src/BlueStar/
 
 # IntlliJ Idea files
 .idea/
