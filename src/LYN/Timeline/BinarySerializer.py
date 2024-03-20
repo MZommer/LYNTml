@@ -7,6 +7,7 @@ from .__types__ import (
     Instance, MoveInstance, LyricsInstance, EventInstance
 )
 from ..Logger import logger
+import datetime
 
 # Decorator
 def struct(func):
@@ -65,7 +66,8 @@ class BinarySerializer:
     
     @struct
     def __parseGeneral(self) -> None:
-        self._reader.float()  # ??
+        version = self._reader.float()
+        
         Song = self._reader.string()
         BeatsPerMeasure = self._reader.uint32()
         FirstMeasureMarkerPos = self._reader.uint32()
@@ -79,6 +81,8 @@ class BinarySerializer:
             Value = self._reader.uint32()
             self.Timeline.general.ScoreSteps.AddScoreStep(Name, Value)
         
+        self.Timeline.version = version
+        
         self.Timeline.general.Song = Song
         self.Timeline.general.BeatsPerMinute = BeatsPerMinute
         self.Timeline.general.SampleFrequency = SampleFrequency
@@ -88,6 +92,13 @@ class BinarySerializer:
         self.Timeline.general.CustomScoreSteps = CustomScoreSteps
         
         # Not serialized values #
+        now = datetime.datetime.now()
+        date = now.strftime("%d/%m/%Y %H:%M:%S")
+
+        self.Timeline.general.LastMoveChangeDate = date
+        self.Timeline.general.LastClassifierChangeDate = date
+        self.Timeline.general.LastPictoModelCreateDeleteDate = date
+        
         self.Timeline.general.WavePath = f".\Sounds\{Song}.wav"
         self.Timeline.general.VideoPath = f".\{Song}\Videos\{Song}.bik"
         self.Timeline.general.PictoFolder = ".\Pictos"
@@ -154,7 +165,7 @@ class BinarySerializer:
         return move
     
     def __parseGesture(self, name: str) -> Gesture:
-        CreationId = len(self.Timeline.databank.GesturesBank)
+        CreationId = len(self.Timeline.databank.GestureBank)
         duration = 2
         SubdivisionsInBeat = 2
         color = "0x00000000"
@@ -204,7 +215,6 @@ class BinarySerializer:
     @struct
     def __parseLayer(self, position: int) -> None:
         bank = self._reader.uint32()
-        
         if bank == Banks.PICTO:
             layer = self.__parsePictoLayer(position)
         elif bank == Banks.MOVE or bank == Banks.GESTURES:
@@ -236,6 +246,13 @@ class BinarySerializer:
     def __parseMoveLayer(self, position: int) -> MoveLayer:
         entries = self._reader.uint32()
         name = self._reader.string()
+        
+        #logger.info(f"{entries} {name} {self._reader.tell()}")
+        if name == "Storyboard":
+            return EventLayer(name, Banks.Id2Name(Banks.EVENTS), position)
+        # Storyboard shares BankId with Gestures
+        # TODO: Add Storyboard parser
+        # TODO: Check LyN code to find StoryboardLayer/Bank
         layer = MoveLayer(name, Banks.Id2Name(Banks.MOVE), position)
         for _ in range(entries):
             instance = self.__parseMoveInstance()
