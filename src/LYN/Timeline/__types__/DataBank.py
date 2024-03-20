@@ -512,9 +512,9 @@ class Gesture(ET.Element):
     def CustomFloats(self, value: list[float]) -> None:
         self.CustomFloatsElement.text = ';'.join(tuple(str(i) for i in value))
 
-class GesturesBank(ET.Element):
+class GestureBank(ET.Element):
     def __init__(self) -> None:
-        super().__init__("GesturesBank")
+        super().__init__("GestureBank")
     
     def AddGesture(self, name: str, CreationId: int, duration: int, SubdivisionsInBeat: int, color: str, gesturemul: float, gestureplus: float, Slack: float, Capacity: float, Stability: float, GoldenMove: bool, EnergyEvaluation: bool, TimingEvaluation: bool, CustomFloats: tuple[float]) -> Gesture:
         gesture = Gesture(name, CreationId, duration, SubdivisionsInBeat, color, gesturemul, gestureplus, Slack, Capacity, Stability, GoldenMove, EnergyEvaluation, TimingEvaluation, CustomFloats)
@@ -526,7 +526,7 @@ class DataBank(ET.Element):
     MoveBank: MoveBank
     EventsBank: EventsBank
     LyricsBank: LyricsBank
-    GesturesBank: GesturesBank
+    GestureBank: GestureBank
     
     # To keep the order #
     MainBank: list[ET.Element]
@@ -537,13 +537,13 @@ class DataBank(ET.Element):
         self.MoveBank = MoveBank()
         self.EventsBank = EventsBank()
         self.LyricsBank = LyricsBank()
-        self.GesturesBank = GesturesBank()
+        self.GestureBank = GestureBank()
         self.MainBank = []
         self.append(self.PictoBank)
         self.append(self.MoveBank)
         self.append(self.EventsBank)
         self.append(self.LyricsBank)
-        self.append(self.GesturesBank)
+        self.append(self.GestureBank)
 
     def AddPicto(self, name: str, CreationId: int, offset: float = None) -> Picto:
         picto = self.PictoBank.AddPicto(name, CreationId, offset)
@@ -561,7 +561,7 @@ class DataBank(ET.Element):
         return event
     
     def AddGesture(self, name: str, CreationId: int, duration: int, SubdivisionsInBeat: int, color: str, gesturemul: float, gestureplus: float, Slack: float, Capacity: float, Stability: float, GoldenMove: bool, EnergyEvaluation: bool, TimingEvaluation: bool, CustomFloats: tuple[float]) -> Gesture:
-        gesture = self.GesturesBank.AddGesture(name, CreationId, duration, SubdivisionsInBeat, color, gesturemul, gestureplus, Slack, Capacity, Stability, GoldenMove, EnergyEvaluation, TimingEvaluation, CustomFloats)
+        gesture = self.GestureBank.AddGesture(name, CreationId, duration, SubdivisionsInBeat, color, gesturemul, gestureplus, Slack, Capacity, Stability, GoldenMove, EnergyEvaluation, TimingEvaluation, CustomFloats)
         self.MainBank.append(gesture)
         return gesture
     
