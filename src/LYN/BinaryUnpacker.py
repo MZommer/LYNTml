@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from .BinaryReader import BinaryReader
+from .Logger import logger
 from io import BytesIO
 import struct
 import binascii
@@ -82,6 +83,6 @@ class Unpacker:
             self.SaveFile(file, f"{path}{idx} {file.ID}.{file.Type}")
     
     def SaveFile(self, file: File, path: str) -> None:
-        print(file)
+        logger.debug(f"{file.ID}")
         with open(path, "wb") as f:
             f.write(file.Data)
