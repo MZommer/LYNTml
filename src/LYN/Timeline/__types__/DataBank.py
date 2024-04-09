@@ -248,6 +248,7 @@ class Event(ET.Element):
         def TypeResolver(name: str) -> str:
             return {
                 "Class": "String",
+                "Name": "String",
                 
                 "Forward": "Float",
                 "Backward": "Float",
@@ -255,15 +256,17 @@ class Event(ET.Element):
                 "Left": "Float",
                 "Down": "Float",
                 "StartOffset": "Float",
-                "BPM": "Float",
+                #"BPM": "Float",
+                "TimeFadeIn": "Float",
+                "TimeFadeOut": "Float",
                 
                 "Target": "Bool",
             }.get(name, "Int")
         
-        def __init__(self, name: str, type: str = '', DisplayInTimeline: int = 1, DefaultValue: str = '') -> None:
+        def __init__(self, name: str, type: str = None, DisplayInTimeline: int = 1, DefaultValue: str = '') -> None:
             super().__init__("Param")
             self.name = name or " New Param"
-            self.type = self.TypeResolver(name)
+            self.type = type or self.TypeResolver(name)
             self.DisplayInTimeline = DisplayInTimeline
             self.DefaultValue = DefaultValue
         
