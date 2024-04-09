@@ -9,6 +9,8 @@ from .__types__ import (
 from ..Logger import logger
 import datetime
 
+LEGACY_VERSION = 9
+
 # Decorator
 def struct(func):
     def wrapper(self, *args, **kwargs):
@@ -20,14 +22,43 @@ def struct(func):
             #raise e
             # ADD ROLLBACK
             logger.error(f"Error while parsing struct {func.__name__} {e}")
+        finally:
+            if not self._reader.tell() >= info.seed + info.sizeOf:
+                logger.debug(f"INCOMPLETE STRUCT {self._reader.tell()=} {info.seed=} {info.sizeOf=}")
+            if self._reader.tell() > info.seed + info.sizeOf:
+                # Ensure pointer is at the end of the struct at the end of the function
+                logger.debug(f"Struct longer than expected. {self._reader.tell()=} {info.seed=} {info.sizeOf=}")
+                
+            # Ensure pointer is at the end of the struct at the end of the function
+            self._reader.seek(info.sizeOf + info.seed)
         
-        if not self._reader.tell() >= info.seed + info.sizeOf:
-            logger.debug(f"INCOMPLETE STRUCT {self._reader.tell()=} {info.seed=} {info.sizeOf=}")
-        
-        # Ensure pointer is at the end of the struct at the end of the function
-        self._reader.seek(info.sizeOf - (self._reader.tell() - info.seed), 1)
         return ret
+    
     return wrapper
+
+def trustable_struct(func):
+    def wrapper(self, *args, **kwargs):
+        info = self._reader.InitStruct()
+        ret = None
+        try:
+            ret = func(self, *args, **kwargs)
+        except Exception as e:
+            #raise e
+            # ADD ROLLBACK
+            logger.error(f"Error while parsing struct {func.__name__} {e}")
+        finally:
+            if not self._reader.tell() >= info.seed + info.sizeOf:
+                logger.debug(f"INCOMPLETE STRUCT {func.__name__} {self._reader.tell()=} {info.seed=} {info.sizeOf=}")
+                self._reader.seek(info.sizeOf + info.seed)
+            if self._reader.tell() > info.seed + info.sizeOf + 8:
+                # Ensure pointer is at the end of the struct at the end of the function
+                logger.error(f"Struct longer than expected. {self._reader.tell()=} {info.seed=} {info.sizeOf=}")
+                self._reader.seek(info.sizeOf + info.seed)
+        
+        return ret
+    
+    return wrapper
+
 
 class BinarySerializer:
     _reader: BinaryReader
@@ -73,7 +104,7 @@ class BinarySerializer:
         FirstMeasureMarkerPos = self._reader.uint32()
         BeatsPerMinute = self._reader.uint32()
         SampleFrequency = self._reader.uint32()
-        WaveNbSamples = self._reader.uint32()
+        WaveNbSamples = self._reader.uint32() if version > LEGACY_VERSION else 0
         CustomScoreSteps = bool(self._reader.uint32())
         
         for _ in range(self._reader.uint32()):
@@ -118,10 +149,12 @@ class BinarySerializer:
 
     @struct
     def __parseDataBank(self) -> None:
+        print("version", self.Timeline.version)
         for _ in range(self._reader.uint32()):
+            #print(self._reader.tell())
             self.__parseBank()
 
-    @struct
+    @trustable_struct
     def __parseBank(self) -> None:
         bank = self._reader.uint32()
         name = self._reader.string()
@@ -192,20 +225,27 @@ class BinarySerializer:
         SubdivisionsInBeat = self._reader.uint32()
         event = self.Timeline.databank.AddEvent(name, CreationId, SubdivisionsInBeat, DefaultDuration)
         i = 0
-        flag = False
-        while not self._reader.tell() >= struct_end:
-            i += 1
-            paramName = self._reader.string()
-            if paramName == "Class":
-                flag = True
-            if flag:
-                self._reader.int32()
-            # TODO: Check whats this value
-            paramType = "Int" # TODO: add handler with known param names
-            DisplayInTimeline = 1
-            DefaultValue = ""
-            event.AddParam(paramName, paramType, DisplayInTimeline, DefaultValue)
-            # Not serialized values
+        
+        flag = self.Timeline.version <= LEGACY_VERSION
+        
+        try:
+            while not self._reader.tell() >= struct_end:
+                i += 1
+                paramName = self._reader.string()
+                if paramName == "Class":
+                    flag = True
+                if flag:
+                    self._reader.int32()
+                # TODO: Check whats this value
+                paramType = None # TODO: add handler with known param names
+                DisplayInTimeline = 1
+                DefaultValue = ""
+                event.AddParam(paramName, paramType, DisplayInTimeline, DefaultValue)
+                # Not serialized values
+        except Exception as e:
+            raise e
+        finally:
+            self._reader.seek(info.sizeOf + info.seed)
         return event
     
     @struct
@@ -223,8 +263,10 @@ class BinarySerializer:
             layer = self.__parseEventLayer(position)
         elif bank == Banks.LYRICS:
             layer = self.__parseLyricsLayer(position)
-        
-        self.Timeline.append(layer)
+        else:
+            logger.error(f"UNKNOWN BANK {bank=}")
+        if layer:
+            self.Timeline.append(layer)
         
     def __parsePictoLayer(self, position: int) -> PictoLayer:
         entries = self._reader.uint32()
@@ -232,8 +274,10 @@ class BinarySerializer:
         layer = PictoLayer(name, Banks.Id2Name(Banks.PICTO), position)
         for _ in range(entries):
             instance = self.__parsePictoInstance()
-            layer.append(instance)
+            if instance:
+                layer.append(instance)
         return layer
+    
     @struct
     def __parsePictoInstance(self) -> Instance:
         bank = self._reader.uint32()
@@ -247,7 +291,6 @@ class BinarySerializer:
         entries = self._reader.uint32()
         name = self._reader.string()
         
-        #logger.info(f"{entries} {name} {self._reader.tell()}")
         if name == "Storyboard":
             return EventLayer(name, Banks.Id2Name(Banks.EVENTS), position)
         # Storyboard shares BankId with Gestures
@@ -256,11 +299,14 @@ class BinarySerializer:
         layer = MoveLayer(name, Banks.Id2Name(Banks.MOVE), position)
         for _ in range(entries):
             instance = self.__parseMoveInstance()
-            layer.append(instance)
-            self._reader.uint32()
-            self._reader.uint32() 
+            if instance:
+                layer.append(instance)
+            if self.Timeline.version > LEGACY_VERSION:
+                self._reader.uint32()
+                self._reader.uint32() 
             # out of the sizeof struct but the next struct is shifted?            
         return layer
+    
     @struct
     def __parseMoveInstance(self) -> MoveInstance:
         bank = self._reader.uint32()
@@ -279,7 +325,8 @@ class BinarySerializer:
         layer = EventLayer(name, Banks.Id2Name(Banks.EVENTS), position)
         for _ in range(entries):
             instance = self.__parseEventInstance()
-            layer.append(instance)
+            if instance:
+                layer.append(instance)
         return layer
     
     @struct
@@ -291,16 +338,21 @@ class BinarySerializer:
         length = self._reader.float()
         color = "0x00000000"
         DefaultDuration = self._reader.uint32()
-        SubdivisionsInBeat = self._reader.uint32()
+        if self.Timeline.version > LEGACY_VERSION:
+            SubdivisionsInBeat = self._reader.uint32()
         position, offset = self.getVirtualPosition(date)
         event = EventInstance(position, name, offset, length, color)
         for param in self.Timeline.databank.find(name).Params:
             if param.type == "String":
                 value = self._reader.string()
+                if param.name == "Class":
+                    self._reader.uint32()
+                    self._reader.uint32()
+                    # ???
             elif param.type == "Float":
                 value = self._reader.float()
             else:
-                value = self._reader.uint32()
+                value = self._reader.int32()
             event.AddParam(param.name, value)
         return event
       
@@ -311,9 +363,10 @@ class BinarySerializer:
         layer = LyricsLayer(name, Banks.Id2Name(Banks.LYRICS), position)
         for _ in range(entries):
             instance = self.__parseLyricsInstance()
-            layer.append(instance)
+            if instance:
+                layer.append(instance)
         return layer
-    @struct
+    @trustable_struct
     def __parseLyricsInstance(self) -> LyricsInstance:
         bank = self._reader.uint32()
         date = self._reader.float()
