@@ -21,9 +21,13 @@ for file in os.listdir("./input"):
         print(file)
         
         timeline = LyN.UnpackAndDecode("./input/" + file, "output/"+name)
+        try:
+            bluestar = BlueStarConverter(timeline)
+        except Exception as e:
+            print("An error ocurred while converting song to BlueStar")
+            print(e)
+            continue
         
-        bluestar = BlueStarConverter(timeline)
-                
         os.makedirs(f"./output/{timeline.general.Song}", exist_ok=True)
 
         json.dump(bluestar.main,
@@ -45,10 +49,10 @@ for file in os.listdir("./input"):
             os.makedirs(f"output/{timeline.general.Song}/classifiers/posenet", exist_ok=True)
         
         for picto in timeline.databank.PictoBank:
-            shutil.copy(f"assets/Pictogram_{bluestar.main.get('NumCoach', 1)}.png", f"output/{timeline.general.Song}/pictos/{picto.name}.png")
+            shutil.copy(f"./assets/Pictogram_{bluestar.main['NumCoach']}.png", f"output/{timeline.general.Song}/pictos/{picto.name}.png")
         
         for move in timeline.databank.MoveBank:
-            shutil.copy("assets/Generic_generic.msm", f"output/{timeline.general.Song}/classifiers/wiiu/{timeline.general.Song.lower()}_{move.name}.msm")
+            shutil.copy("./assets/Generic_generic.msm", f"output/{timeline.general.Song}/classifiers/wiiu/{timeline.general.Song.lower()}_{move.name}.msm")
         
         for gesture in timeline.databank.GestureBank:
             pass # TODO: add generic gesture
