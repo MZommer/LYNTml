@@ -341,19 +341,30 @@ class BinarySerializer:
         if self.Timeline.version > LEGACY_VERSION:
             SubdivisionsInBeat = self._reader.uint32()
         position, offset = self.getVirtualPosition(date)
+        #print(self._reader.tell(), name)
         event = EventInstance(position, name, offset, length, color)
-        for param in self.Timeline.databank.find(name).Params:
-            if param.type == "String":
-                value = self._reader.string()
-                if param.name == "Class":
-                    self._reader.uint32()
-                    self._reader.uint32()
+        for bank in self.Timeline.databank.find(name):
+            if bank.tag != "Event":
+                continue
+            for idx, param in enumerate(bank.Params):
+                if param.type == "String":
+                    value = self._reader.string()
+                    if param.name == "Class":
+                        self._reader.uint32()
+                        self._reader.uint32()
+                        # ???
+                elif param.type == "Float":
+                    value = self._reader.float()
+                else:
+                    value = self._reader.int32()
+                if idx == 0 and param.name != "Class":
+                    try:
+                        self._reader.uint32()
+                        self._reader.uint32()
+                    except:
+                        pass # idk the last instance doesnt have this
                     # ???
-            elif param.type == "Float":
-                value = self._reader.float()
-            else:
-                value = self._reader.int32()
-            event.AddParam(param.name, value)
+                event.AddParam(param.name, value)
         return event
       
     
