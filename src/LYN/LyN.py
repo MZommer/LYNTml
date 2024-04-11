@@ -30,7 +30,7 @@ class LyN:
             try:
                 classifier = classifiers[move.CreationId]
             except IndexError:
-                logger.error("Missing classifier", move.name)
+                logger.error(f"Missing classifier {move.name}")
             with open(path.join(output, "classifiers", f"{move.name}_{Timeline.general.Song}.{classifier.Type}".lower()), "wb") as f:
                 f.write(classifier.Data)
         
