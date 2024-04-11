@@ -59,7 +59,7 @@ for file in os.listdir("./input"):
         
         if BLUESTAR_AVAILABLE:
             os.makedirs(f"output/{timeline.general.Song}/UAF", exist_ok=True)
-            song = BlueStar.Song(**bluestar.main, moves=bluestar.Moves, kinectMoves=bluestar.KinectMoves)
+            song = BlueStar.Song(**bluestar.main, moves=bluestar.moves, kinectMoves=bluestar.kinectmoves)
             song.makeUAF()
             UAF_PATH = f"output/{timeline.general.Song}/UAF/{bluestar.main['MapName']}"
             os.makedirs(f"{UAF_PATH}/timeline", exist_ok=True)
