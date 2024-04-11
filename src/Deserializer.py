@@ -42,7 +42,7 @@ for file in os.listdir("./input"):
         
         os.makedirs(f"output/{timeline.general.Song}/pictos", exist_ok=True)
         os.makedirs(f"output/{timeline.general.Song}/classifiers/wiiu", exist_ok=True)
-        if timeline.databank.GestureBank:
+        if len(timeline.databank.GestureBank):
             os.makedirs(f"output/{timeline.general.Song}/classifiers/x360", exist_ok=True)
             os.makedirs(f"output/{timeline.general.Song}/classifiers/orbis", exist_ok=True)
             os.makedirs(f"output/{timeline.general.Song}/classifiers/durango", exist_ok=True)
