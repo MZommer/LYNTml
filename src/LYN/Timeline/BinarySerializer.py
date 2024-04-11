@@ -130,9 +130,9 @@ class BinarySerializer:
         self.Timeline.general.LastClassifierChangeDate = date
         self.Timeline.general.LastPictoModelCreateDeleteDate = date
         
-        self.Timeline.general.WavePath = f".\Sounds\{Song}.wav"
-        self.Timeline.general.VideoPath = f".\{Song}\Videos\{Song}.bik"
-        self.Timeline.general.PictoFolder = ".\Pictos"
+        self.Timeline.general.WavePath = rf".\Sounds\{Song}.wav"
+        self.Timeline.general.VideoPath = rf".\{Song}\Videos\{Song}.bik"
+        self.Timeline.general.PictoFolder = r".\Pictos"
     
     @struct
     def __parseVirtualStart(self) -> None:
