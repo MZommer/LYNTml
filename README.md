@@ -10,14 +10,7 @@ and "LYNtml.py" which will deserialize the bins for lately use in ubiart
 
 ## Functionalities
 
+- Generates both .tml (xml) LyN timeline format and JSON BlueStar format, if the [BlueStar](https://github.com/MZommer/BlueStar) module is available, it will generate the UAF folder.
 - Generates generic MoveSpaceModels and "decompress" the classifiers, LiveMoveClassifier (LMC) or GestureClassifier (Kinect Classifier) if available.
 - Generates Placeholder pictograms it's respective names.
-- If the [BlueStar](https://github.com/MZommer/BlueStar) module is available, it will generate the UAF folder.
-- It tries to deserialize all events.
-
-## TODOS:
-- Make it deserialize in the XML format that the TML has.
-- Refactor the Timeline class.
-- Make decorator for the repetitive Hash and SizeOf parts.
-
-### If you found it usefull remember to star repo <3
+- It deserializes all events (XML only).
