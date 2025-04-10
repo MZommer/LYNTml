@@ -74,9 +74,13 @@ class BinarySerializer:
         offset = time - self.virtualstart[position]
         return position, offset
 
+    def is_legacy(self) -> bool:
+        return self.timeline.version > LEGACY_VERSION
+
     # Reader functions #
     @lyn_struct
     def _deserialize_timeline(self):
+        logger.debug("Deserializing Timeline")
         self._deserialize_general()
         self._deserialize_virtual_start()
         self._deserialize_data_bank()
@@ -85,7 +89,6 @@ class BinarySerializer:
     @lyn_struct
     def _deserialize_general(self) -> None:
         version = self._reader.float()
-
         song = self._reader.string()
         beats_per_measure = self._reader.uint32()
         first_measure_marker_pos = self._reader.uint32()
@@ -120,9 +123,11 @@ class BinarySerializer:
         self.timeline.general.WavePath = rf".\Sounds\{song}.wav"
         self.timeline.general.VideoPath = rf".\{song}\Videos\{song}.bik"
         self.timeline.general.PictoFolder = r".\Pictos"
+        logger.debug(f"Deserializing GENERAL (version {version}) (legacy {self.is_legacy()})")
 
     @lyn_struct
     def _deserialize_virtual_start(self) -> None:
+        logger.debug("Deserializing VirtualStart")
         self._reader.uint32()  # 0x00
 
         for position in range(self._reader.uint32()):
@@ -136,7 +141,6 @@ class BinarySerializer:
 
     @lyn_struct
     def _deserialize_data_bank(self) -> None:
-        print("version", self.timeline.version)
         for _ in range(self._reader.uint32()):
             self._deserialize_bank()
 
@@ -144,7 +148,7 @@ class BinarySerializer:
     def _deserialize_bank(self) -> None:
         bank = self._reader.uint32()
         name = self._reader.string()
-
+        logger.debug(f"Deserializing BANK {name} ({Banks.id2name(bank)})")
         if bank == Banks.LYRICS:
             logger.debug("LYRICS BANK?")
 
@@ -248,6 +252,7 @@ class BinarySerializer:
     @lyn_struct
     def _deserialize_layer(self, position: int) -> None:
         bank = self._reader.uint32()
+        logger.debug(f"Deserializing LAYER {Banks.id2name(bank)} {bank}")
         if bank == Banks.PICTO:
             layer = self._deserialize_picto_layer(position)
         elif bank == Banks.MOVE or bank == Banks.GESTURES:
@@ -268,12 +273,12 @@ class BinarySerializer:
         layer = PictoLayer(name, Banks.id2name(Banks.PICTO), position)
         for _ in range(entries):
             instance = self._deserialize_picto_instance()
-            if instance:
-                layer.append(instance)
+            layer.append(instance)
         return layer
 
     @lyn_struct
     def _deserialize_picto_instance(self) -> Instance:
+        logger.debug("Deserializing PICTO INSTANCE")
         bank = self._reader.uint32()
         # TODO: add bank checker?
         date = self._reader.float()
@@ -293,9 +298,8 @@ class BinarySerializer:
         layer = MoveLayer(name, Banks.id2name(Banks.MOVE), position)
         for _ in range(entries):
             instance = self._deserialize_move_instance()
-            if instance:
-                layer.append(instance)
-            if self.timeline.version > LEGACY_VERSION:
+            layer.append(instance)
+            if self.is_legacy():
                 self._reader.uint32()
                 self._reader.uint32()
                 # out of the sizeof struct but the next struct is shifted?
@@ -303,6 +307,7 @@ class BinarySerializer:
 
     @lyn_struct
     def _deserialize_move_instance(self) -> MoveInstance:
+        logger.debug("Deserializing MOVE INSTANCE")
         bank = self._reader.uint32()
         date = self._reader.float()
         name_id = self._reader.uint32()
@@ -326,12 +331,12 @@ class BinarySerializer:
         layer = EventLayer(name, Banks.id2name(Banks.EVENTS), position)
         for _ in range(entries):
             instance = self._deserialize_event_instance()
-            if instance:
-                layer.append(instance)
+            layer.append(instance)
         return layer
 
     @lyn_struct
     def _deserialize_event_instance(self) -> EventInstance:
+        logger.debug("Deserializing EVENT INSTANCE")
         bank = self._reader.uint32()
         date = self._reader.float()
         name_id = self._reader.uint32()
@@ -339,7 +344,7 @@ class BinarySerializer:
         length = self._reader.float()
         color = "0x00000000"
         default_duration = self._reader.uint32()
-        if self.timeline.version > LEGACY_VERSION:
+        if self.is_legacy():
             subdivisions_in_beat = self._reader.uint32()
         position, offset = self.get_virtual_position(date)
         event = EventInstance(position, name, offset, length, color)
@@ -373,12 +378,12 @@ class BinarySerializer:
         layer = LyricsLayer(name, Banks.id2name(Banks.LYRICS), position)
         for _ in range(entries):
             instance = self._deserialize_lyrics_instance()
-            if instance:
-                layer.append(instance)
+            layer.append(instance)
         return layer
 
     @lyn_struct(trustable=True)
     def _deserialize_lyrics_instance(self) -> LyricsInstance:
+        logger.debug("Deserializing LYRICS INSTANCE")
         bank = self._reader.uint32()
         date = self._reader.float()
         length = self._reader.float()

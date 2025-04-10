@@ -621,5 +621,5 @@ class DataBank(ET.Element):
             if i.name == name:
                 return i
 
-    def get_bank(self, idx: int) -> ET.Element:
+    def get_bank(self, idx: int) -> str:
         return self.MainBank[idx].name

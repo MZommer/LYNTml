@@ -91,6 +91,6 @@ class Unpacker:
 
     @staticmethod
     def save_file(file: File, path: os.PathLike) -> None:
-        logger.debug(f"Saving file {file.id}")
+        logger.debug(f"Saving file {file.id}.{file.type}")
         with open(path, "wb") as f:
             f.write(file.data)
