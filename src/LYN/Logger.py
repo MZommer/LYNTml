@@ -2,7 +2,7 @@ import logging
 
 logger = logging.getLogger('LyN')
 
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 # Create a handler
 handler = logging.StreamHandler()
@@ -14,6 +14,7 @@ handler.setFormatter(formatter)
 
 # Add the handler to the logger
 logger.addHandler(handler)
+
 
 def toggle_level():
     if logger.level == logging.DEBUG:

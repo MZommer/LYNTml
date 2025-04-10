@@ -1,6 +1,9 @@
-from .Timeline.__types__ import Timeline, Instance
+from typing import Tuple, Dict, List, Union, Optional
 
-def IndexResolver(name: str) -> int:
+from .Timeline.__types__ import Timeline, Instance, MoveInstance, LyricsInstance
+
+
+def index_resolver(name: str) -> int:
     if name[-1].isdigit():
         idx = int(name[-1]) - 1
         if idx < 0:
@@ -10,15 +13,15 @@ def IndexResolver(name: str) -> int:
 
 
 class BlueStarConverter:
-    main: dict
-    moves: tuple = [], [], [], []
-    kinectmoves: tuple = [], [], [], []
+    main: Dict[str, Optional[Union[str, int]]]
+    moves: Tuple[List[Dict[str, Union[str, int]]], ...] = [], [], [], []
+    kinectmoves: Tuple[List[Dict[str, Union[str, int]]], ...] = [], [], [], []
     
     def __init__(self, timeline: Timeline):
         self.timeline = timeline
-        self.ToBlueStar()
+        self.to_blue_star()
         
-    def PictoInstanceResolver(self, instance: Instance) -> dict:
+    def picto_instance_resolver(self, instance: Instance) -> Dict[str, Union[str, int]]:
         position_date = self.timeline.markerlist[instance.position].date
         date = instance.date or position_date
         duration = self.timeline.markerlist[instance.position + 1].date - date
@@ -28,7 +31,7 @@ class BlueStarConverter:
             "duration": int(duration * 1000),
         }
     
-    def MoveInstanceResolver(self, instance: Instance) -> dict:
+    def move_instance_resolver(self, instance: MoveInstance) -> Dict[str, Union[str, int]]:
         position_date = self.timeline.markerlist[instance.position].date
         date = instance.date or position_date
         duration = instance.duration or self.timeline.markerlist[instance.position + instance.OffsetInSubdivisions].date - date
@@ -39,7 +42,7 @@ class BlueStarConverter:
             "goldMove": int(instance.GoldMove),
         }
     
-    def LyricsInstanceResolver(self, instance: Instance) -> dict:
+    def lyrics_instance_resolver(self, instance: LyricsInstance) -> Dict[str, Union[str, int]]:
         position_date = self.timeline.markerlist[instance.position].date
         date = position_date + instance.Offset
         duration = instance.Length
@@ -53,7 +56,7 @@ class BlueStarConverter:
         }
         
         
-    def ToBlueStar(self) -> None:        
+    def to_blue_star(self) -> None:
         beats = sorted(marker.date * 1000 for marker in self.timeline.markerlist)
         pictos = []
         lyrics = []
@@ -61,10 +64,10 @@ class BlueStarConverter:
         
         for layer in self.timeline.iter("Layer"):
             if layer.type == "Move":
-                idx = IndexResolver(layer.name)
+                idx = index_resolver(layer.name)
                 
                 for instance in layer:
-                    clip = self.MoveInstanceResolver(instance)
+                    clip = self.move_instance_resolver(instance)
                     
                     if layer.name.startswith("Kinect"):
                         self.kinectmoves[idx].append(clip)
@@ -73,12 +76,12 @@ class BlueStarConverter:
             
             elif layer.type == "Picto":
                 for instance in layer:
-                    clip = self.PictoInstanceResolver(instance)
+                    clip = self.picto_instance_resolver(instance)
                     pictos.append(clip)
 
             elif layer.type == "Lyrics":
                 for instance in layer:
-                    clip = self.LyricsInstanceResolver(instance)
+                    clip = self.lyrics_instance_resolver(instance)
                     if layer.name.lower().startswith("karaoke"):
                         karaoke.append(clip)
                     else:

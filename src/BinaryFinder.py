@@ -1,8 +1,9 @@
 """Script for filtering the bins in the bf"""
 
-from LYN.LynTML import LynTML
 import os
 import shutil
+
+from LYN.LynTML import LynTML
 
 os.makedirs("input", exist_ok=True)
 os.makedirs("output", exist_ok=True)
@@ -12,7 +13,7 @@ for file in os.listdir("./input"):
         print(file)
         tml = LynTML()
         try:
-            tml.Deserialize("./input/" + file, True)
+            tml.deserialize("./input/" + file, True)
         except:
             pass
         if tml.CodeName != "":

@@ -1,24 +1,28 @@
-from collections.abc import Callable
 import xml.etree.ElementTree as ET
-from xml.etree.ElementTree import Element
+
 
 class ScoreSteps(ET.Element):
+    DEFAULT_SCORE_STEPS = (
+        ("X", 1),
+        ("Ok", 25),
+        ("Good", 50),
+        ("Great", 75),
+        ("Perfect", 100)
+    )
+
     def __init__(self) -> None:
         super().__init__("ScoreSteps")
-    
-    def AddScoreStep(self, Name: str, Value: int) -> None:
+
+    def add_score_step(self, name: str, value: int) -> None:
         ET.SubElement(self, "ScoreStep", attrib={
-            "Name": str(Name),
-            "Value": str(Value)
+            "Name": name,
+            "Value": str(value)
         })
-    
-    def SetDefaultSteps(self) -> None:
-        self.AddScoreStep("X", 1)
-        self.AddScoreStep("Ok", 25)
-        self.AddScoreStep("Good", 50)
-        self.AddScoreStep("Great", 75)
-        self.AddScoreStep("Perfect", 100)
-    
+
+    def set_default_steps(self) -> None:
+        for name, value in self.DEFAULT_SCORE_STEPS:
+            self.add_score_step(name, value)
+
 
 class General(ET.Element):
     LastMoveChangeDateElement: ET.Element
@@ -48,8 +52,7 @@ class General(ET.Element):
     CustomScoreStepsElement: ET.Element
     CustomScoreSteps: bool
     ScoreSteps: ScoreSteps
-    
-    
+
     def __init__(self) -> None:
         super().__init__("general")
         self.LastClassifierChangeDateElement = ET.SubElement(self, "LastClassifierChangeDate")
@@ -67,99 +70,112 @@ class General(ET.Element):
         self.CustomScoreStepsElement = ET.SubElement(self, "CustomScoreSteps")
         self.ScoreSteps = ScoreSteps()
         self.append(self.ScoreSteps)
-    
+
     @property
     def LastClassifierChangeDate(self) -> str:
         return self.LastClassifierChangeDateElement.text
+
     @LastClassifierChangeDate.setter
     def LastClassifierChangeDate(self, value: str) -> None:
         self.LastClassifierChangeDateElement.text = str(value)
-    
+
     @property
     def LastMoveChangeDate(self) -> str:
         return self.LastMoveChangeDateElement.text
+
     @LastMoveChangeDate.setter
     def LastMoveChangeDate(self, value: str) -> None:
         self.LastMoveChangeDateElement.text = str(value)
-    
+
     @property
     def LastPictoModelCreateDeleteDate(self) -> str:
         return self.LastPictoModelCreateDeleteDateElement.text
+
     @LastPictoModelCreateDeleteDate.setter
     def LastPictoModelCreateDeleteDate(self, value: str) -> None:
         self.LastPictoModelCreateDeleteDateElement.text = str(value)
-        
+
     @property
     def Song(self) -> str:
         return self.SongElement.text
+
     @Song.setter
     def Song(self, value: str) -> None:
         self.SongElement.text = str(value)
-    
+
     @property
     def BeatsPerMinute(self) -> int:
         return self._BeatsPerMinute
+
     @BeatsPerMinute.setter
     def BeatsPerMinute(self, value: int) -> None:
         self._BeatsPerMinute = value
         self.BeatsPerMinuteElement.text = str(value)
-    
+
     @property
     def SampleFrequency(self) -> int:
         return self._SampleFrequency
+
     @SampleFrequency.setter
     def SampleFrequency(self, value: int) -> None:
         self._SampleFrequency = value
         self.SampleFrequencyElement.text = str(value)
-    
+
     @property
     def BeatsPerMeasure(self) -> int:
         return self._BeatsPerMeasure
+
     @BeatsPerMeasure.setter
     def BeatsPerMeasure(self, value: int) -> None:
         self._BeatsPerMeasure = value
         self.BeatsPerMeasureElement.text = str(value)
-    
+
     @property
     def FirstMeasureMarkerPos(self) -> int:
         return self._FirstMeasureMarkerPos
+
     @FirstMeasureMarkerPos.setter
     def FirstMeasureMarkerPos(self, value: int) -> None:
         self._FirstMeasureMarkerPos = value
         self.FirstMeasureMarkerPosElement.text = str(value)
-    
+
     @property
     def WaveNbSamples(self) -> int:
         return self._WaveNbSamples
+
     @WaveNbSamples.setter
     def WaveNbSamples(self, value: int) -> None:
         self._WaveNbSamples = value
         self.WaveNbSamplesElement.text = str(value)
-        
+
     @property
     def WavePath(self) -> str:
         return self.WavePathElement.text
+
     @WavePath.setter
     def WavePath(self, value: str) -> None:
         self.WavePathElement.text = str(value)
-        
+
     @property
     def VideoPath(self) -> str:
         return self.VideoPathElement.text
+
     @VideoPath.setter
     def VideoPath(self, value: str) -> None:
         self.VideoPathElement.text = str(value)
-    
+
     @property
     def PictoFolder(self) -> str:
         return self.PictoFolderElement.text
+
     @PictoFolder.setter
     def PictoFolder(self, value: str) -> None:
         self.PictoFolderElement.text = str(value)
-    
+
     @property
     def CustomScoreSteps(self) -> bool:
         return self._CustomScoreSteps
+
     @CustomScoreSteps.setter
     def CustomScoreSteps(self, value: bool) -> None:
         self._CustomScoreSteps = value

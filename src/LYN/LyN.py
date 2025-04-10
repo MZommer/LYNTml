@@ -1,40 +1,44 @@
 import os
-from os import path
+from pathlib import Path
+
 from .BinaryUnpacker import Unpacker
+from .Logger import logger
 from .TableReader import TableReader
 from .Timeline.BinarySerializer import BinarySerializer
-from .Logger import logger
+from .Timeline.__types__ import Timeline
+
+
 class LyN:
     @staticmethod
-    def UnpackAndDecode(file: str, output: str) -> None:
+    def UnpackAndDecode(file: os.PathLike, output: os.PathLike) -> Timeline:
+        output = Path(output)
         unpacker = Unpacker(file)
-        
+
         header, table, *files = unpacker.files
-        
-        os.makedirs(path.join(output, "bin"), exist_ok=True)
+
+        os.makedirs(output / "bin", exist_ok=True)
         for idx, file in enumerate(unpacker.files):
-            unpacker.SaveFile(file, path.join(output, "bin", f"{idx}_{file.ID}.{file.Type}"))
-        
-        classifiers_id, timeline_id = TableReader(table.Data)
-        
-        classifiers = tuple(file for file in files if file.ID in classifiers_id)
-        timeline = next(file for file in files if file.ID == timeline_id)
-        
+            unpacker.save_file(file, output / "bin" / f"{idx}_{file.id}.{file.type}")
+
+        classifiers_id, timeline_id = TableReader(table.data)
+
+        classifiers = tuple(file for file in files if file.id in classifiers_id)
+        timeline_file = next(file for file in files if file.id == timeline_id)
+
         serializer = BinarySerializer()
-        Timeline = serializer.Deserialize(timeline.Data)
-        
-        Timeline.write(path.join(output, f"{Timeline.general.Song}.tml"))
-        os.makedirs(path.join(output, "classifiers"), exist_ok=True)
-        
-        for move in Timeline.databank.MoveBank:
+        timeline = serializer.deserialize(timeline_file.data)
+
+        timeline.write(output / f"{timeline.general.Song}.tml")
+        os.makedirs(output / "classifiers", exist_ok=True)
+
+        for move in timeline.databank.MoveBank:
             try:
                 classifier = classifiers[move.CreationId]
             except IndexError:
                 logger.error(f"Missing classifier {move.name}")
-            with open(path.join(output, "classifiers", f"{move.name}_{Timeline.general.Song}.{classifier.Type}".lower()), "wb") as f:
-                f.write(classifier.Data)
-        
-        return Timeline
-        
+            classifier_path = os.path.join(output, "classifiers",
+                                           f"{move.name}_{timeline.general.Song}.{classifier.type}".lower())
+            with open(classifier_path, "wb") as f:
+                f.write(classifier.data)
 
-        
+        return timeline

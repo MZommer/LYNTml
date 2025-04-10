@@ -1,8 +1,10 @@
 import xml.etree.ElementTree as ET
+
 from .__types__ import (
     Timeline,
-    PictoLayer, MoveLayer, LyricsLayer, EventLayer,
+    PictoLayer, MoveLayer, LyricsLayer, EventLayer, EventInstance,
 )
+
 
 def tree2dict(tree: ET.Element) -> dict:
     def element2dict(element: ET.Element) -> dict:
@@ -11,146 +13,206 @@ def tree2dict(tree: ET.Element) -> dict:
             result[element.tag] = element.text
         if element.attrib:
             result.update(element.attrib)
-        if tuple(element):
+        if tuple(element):  # TODO: check if len(element)
             result[element.tag] = [element2dict(child) for child in element]
         return result
+
     result = {}
     result.update(tree.attrib)
     for element in tree:
         result.update(element2dict(element))
     return result
 
+
 class XMLSerializer:
     # Timeline: Timeline
     tree: ET.ElementTree
+
     def __init__(self) -> None:
-        self.Timeline = Timeline()
-        
-    
-    def Deserialize(self, path: str) -> Timeline:
+        self.timeline = Timeline()
+
+    def deserialize(self, path: str) -> Timeline:
         tree = ET.parse(path)
         root = tree.getroot().find("partition")
-        
+
         for element in root:
             if element.tag == "general":
-                self.__loadGeneral(element)
+                self._load_general(element)
             elif element.tag == "databank":
-                self.__loadBanks(element)
+                self._load_banks(element)
             elif element.tag == "markerlist":
-                self.__loadMarkerlist(element)
+                self._load_markerlist(element)
             elif element.tag == "layer":
-                self.__loadLayer(element)
+                self._load_layer(element)
             else:
                 raise Exception(f"Unknown element tag: {element.tag}")
-        
-        return self.Timeline
-        
-    
-    def __loadGeneral(self, element: ET.Element) -> None:
-        general = self.Timeline.general
+
+        return self.timeline
+
+    def _load_general(self, element: ET.Element) -> None:
+        general = self.timeline.general
         for child in element:
             if child.tag == "ScoreSteps":
-                for scorestep in child:
-                    general.ScoreSteps.AddScoreStep(scorestep.attrib["Name"], int(scorestep.attrib["Value"]))
+                for score_step in child:
+                    general.ScoreSteps.add_score_step(
+                        score_step.attrib["Name"],
+                        int(score_step.attrib["Value"]),
+                    )
             else:
                 setattr(general, child.tag, child.text)
-    
-    def __loadBanks(self, element: ET.Element) -> None:
+
+    def _load_banks(self, element: ET.Element) -> None:
         for child in element:
             if child.tag == "PictoBank":
-                self.__loadPictoBank(child)
+                self._load_picto_bank(child)
             elif child.tag == "MoveBank":
-                self.__loadMoveBank(child)
+                self._load_move_bank(child)
             elif child.tag == "EventsBank":
-                self.__loadEventsBank(child)
+                self._load_events_bank(child)
             elif child.tag == "LyricsBank":
                 pass
             elif child.tag == "GestureBank":
                 pass
             else:
                 raise Exception(f"Unknown bank: {child.tag}")
-    
-    def __loadPictoBank(self, element: ET.Element) -> None:
-        PictoBank = self.Timeline.databank.PictoBank
+
+    def _load_picto_bank(self, element: ET.Element) -> None:
+        picto_bank = self.timeline.databank.PictoBank
         for child in element:
-            PictoBank.AddPicto(child.attrib["name"], child.attrib["CreationId"], child.attrib.get("duration"))
-    
-    def __loadMoveBank(self, element: ET.Element) -> None:
-        MoveBank = self.Timeline.databank.MoveBank
+            picto_bank.add_picto(
+                child.attrib["name"],
+                int(child.attrib["CreationId"]),
+                child.attrib.get("duration"),
+            )
+
+    def _load_move_bank(self, element: ET.Element) -> None:
+        move_bank = self.timeline.databank.MoveBank
         for child in element:
             doc = tree2dict(child)
-            MoveBank.AddMove(
+            move_bank.add_move(
                 doc["name"], doc["CreationId"],
                 doc["duration"], doc["SubdivisionsInBeat"], doc["color"],
                 doc["livemovemul"], doc["livemoveplus"], doc["Slack"], doc["Capacity"], doc["Stability"],
                 doc["GoldenMove"], doc["EnergyEvaluation"], doc["TimingEvaluation"],
-                doc["CustomFloats"]                
+                doc["CustomFloats"],
             )
-    
-    def __loadEventsBank(self, element: ET.Element) -> None:
-        EventsBank = self.Timeline.databank.EventsBank
+
+    def _load_events_bank(self, element: ET.Element) -> None:
+        events_bank = self.timeline.databank.EventsBank
         for child in element:
             name = child.attrib["name"]
-            CreationId = child.attrib["CreationId"]
-            DefaultDuration = child.find("DefaultDuration").text
-            SubdivisionsInBeat = child.find("SubdivisionsInBeat").text
-            event = EventsBank.AddEvent(name, CreationId, DefaultDuration, SubdivisionsInBeat)
-            Params = child.find("Params")
-            for param in Params:
-                event.AddParam(param.attrib["name"], param.attrib["type"], param.attrib["DisplayInTimeline"], param.attrib["DefaultValue"])
-    
-    def __loadMarkerlist(self, element: ET.Element) -> None:
-        markerlist = self.Timeline.markerlist
+            creation_id = child.attrib["CreationId"]
+            default_duration = child.find("DefaultDuration").text
+            subdivisions_in_beat = child.find("SubdivisionsInBeat").text
+            event = events_bank.add_event(
+                name,
+                int(creation_id),
+                int(default_duration),
+                int(subdivisions_in_beat),
+            )
+            for param in child.find("Params"):
+                event.add_param(
+                    param.attrib["name"],
+                    param.attrib["type"],
+                    int(param.attrib["DisplayInTimeline"]),
+                    param.attrib["DefaultValue"],
+                )
+
+    def _load_markerlist(self, element: ET.Element) -> None:
+        markerlist = self.timeline.markerlist
         for marker in element:
-            markerlist.AddMarker(marker.attrib["position"], marker.attrib["name"], marker.attrib["sampleposition"], marker.attrib["date"])
-    
-    def __loadLayer(self, element: ET.Element) -> None:
+            markerlist.add_marker(
+                int(marker.attrib["position"]),
+                marker.attrib["name"],
+                int(marker.attrib["sampleposition"]),
+                float(marker.attrib["date"]),
+            )
+
+    def _load_layer(self, element: ET.Element) -> None:
         if element.attrib["type"] == "Picto":
-            self.__loadPictoLayer(element)
+            self._load_picto_layer(element)
         elif element.attrib["type"] == "Move":
-            self.__loadMoveLayer(element)
+            self._load_move_layer(element)
         elif element.attrib["type"] == "Lyrics":
-            self.__loadLyricsLayer(element)
+            self._load_lyrics_layer(element)
         elif element.attrib["type"] == "Events":
-            self.__loadEventsLayer(element)
-    
-    def __loadPictoLayer(self, element: ET.Element) -> None:
-        layer = PictoLayer(element.attrib["name"], element.attrib["type"], element.attrib["position"])
-        self.Timeline.append(layer)
+            self._load_events_layer(element)
+
+    def _load_picto_layer(self, element: ET.Element) -> None:
+        layer = PictoLayer(
+            element.attrib["name"],
+            element.attrib["type"],
+            int(element.attrib["position"]),
+        )
+        self.timeline.append(layer)
         for child in element:
             if child.tag == "Instance":
-                layer.AddInstance(child.attrib["position"], child.attrib["model"], child.attrib["date"])
-    
-    def __loadMoveLayer(self, element: ET.Element) -> None:
-        layer = MoveLayer(element.attrib["name"], element.attrib["type"], element.attrib["position"])
-        self.Timeline.append(layer)
+                layer.AddInstance(
+                    int(child.attrib["position"]),
+                    child.attrib["model"],
+                    float(child.attrib["date"]),
+                )
+
+    def _load_move_layer(self, element: ET.Element) -> None:
+        layer = MoveLayer(
+            element.attrib["name"],
+            element.attrib["type"],
+            int(element.attrib["position"]),
+        )
+        self.timeline.append(layer)
         for child in element:
             if child.tag == "Instance":
-                GoldMove = child.find("GoldMove").text
-                OffsetInSubdivisions = child.find("OffsetInSubdivisions").text
-                layer.AddInstance(child.attrib["position"], child.attrib["model"], child.attrib["date"], child.attrib["duration"], GoldMove, OffsetInSubdivisions)
-    
-    def __loadLyricsLayer(self, element: ET.Element) -> None:
-        layer = LyricsLayer(element.attrib["name"], element.attrib["type"], element.attrib["position"])
-        self.Timeline.append(layer)
+                gold_move = child.find("GoldMove").text
+                offset_in_subdivisions = child.find("OffsetInSubdivisions").text
+                layer.AddInstance(
+                    int(child.attrib["position"]),
+                    child.attrib["model"],
+                    float(child.attrib["date"]),
+                    float(child.attrib["duration"]),
+                    bool(gold_move),
+                    int(offset_in_subdivisions),
+                )
+
+    def _load_lyrics_layer(self, element: ET.Element) -> None:
+        layer = LyricsLayer(
+            element.attrib["name"],
+            element.attrib["type"],
+            int(element.attrib["position"]),
+        )
+        self.timeline.append(layer)
         for child in element:
             if child.tag == "Instance" and child.attrib["model"] == "Lyrics":
-                Offset = child.find("Offset").text
-                Length = child.find("Length").text
-                Text = child.find("Text").text
-                layer.AddInstance(child.attrib["position"], child.attrib["model"], Offset, Length, Text)
-    
-    def __loadEventsLayer(self, element: ET.Element) -> None:
-        layer = EventLayer(element.attrib["name"], element.attrib["type"], element.attrib["position"])
-        self.Timeline.append(layer)
+                offset = child.find("Offset").text
+                length = child.find("Length").text
+                text = child.find("Text").text
+                layer.AddInstance(
+                    int(child.attrib["position"]),
+                    child.attrib["model"],
+                    float(offset),
+                    float(length),
+                    text,
+                )
+
+    def _load_events_layer(self, element: ET.Element) -> None:
+        layer = EventLayer(
+            element.attrib["name"],
+            element.attrib["type"],
+            int(element.attrib["position"]),
+        )
+        self.timeline.append(layer)
         for child in element:
             if child.tag == "Instance":
-                Offset = child.find("Offset").text
-                Length = child.find("Length").text
+                offset = child.find("Offset").text
+                length = child.find("Length").text
                 color = child.find("color").text
-                Params = child.find("Params")
-                instance = layer.AddInstance(child.attrib["position"], child.attrib["model"], Offset, Length, color)
-                
-                for param in Params:
+                params = child.find("Params")
+                instance: EventInstance = layer.AddInstance(
+                    int(child.attrib["position"]),
+                    child.attrib["model"],
+                    float(offset),
+                    float(length),
+                    color,
+                )
+
+                for param in params:
                     instance.AddParam(param.attrib["name"], param.attrib["value"])
-    

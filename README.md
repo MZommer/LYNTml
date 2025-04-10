@@ -3,7 +3,7 @@ LyN engine, used in Just Dance 2-3-4 and spin-offs.
 
 This engine uses BigFile bundles (.*BF).
 
-The module has a LyNTML class that will deserialize this file for later proccessing.
+The module has a LyNTML class that will deserialize this file for later processing.
 
 In the tools folder you will find "BinFinder.py" which will filter the songs bins on the bf,
 and "LYNtml.py" which will deserialize the bins for lately use in ubiart
