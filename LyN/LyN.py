@@ -1,11 +1,11 @@
 import os
 from pathlib import Path
 
-from .BinaryUnpacker import Unpacker
-from .Logger import logger
-from .TableReader import TableReader
+from .binary_unpacker import Unpacker
+from .logger import logger
+from .table_reader import table_reader
 from .Timeline.BinarySerializer import BinarySerializer
-from .Timeline.__types__ import Timeline
+from .Timeline.timeline import Timeline
 
 
 class LyN:
@@ -14,13 +14,13 @@ class LyN:
         output = Path(output)
         unpacker = Unpacker(file)
 
-        header, table, *files = unpacker.files
+        _header, table, *files = unpacker.files
 
         os.makedirs(output / "bin", exist_ok=True)
         for idx, file in enumerate(unpacker.files):
             unpacker.save_file(file, output / "bin" / f"{idx}_{file.id}.{file.type}")
 
-        classifiers_id, timeline_id = TableReader(table.data)
+        classifiers_id, timeline_id = table_reader(table.data)
 
         classifiers = tuple(file for file in files if file.id in classifiers_id)
         timeline_file = next(file for file in files if file.id == timeline_id)
@@ -35,9 +35,12 @@ class LyN:
             try:
                 classifier = classifiers[move.CreationId]
             except IndexError:
-                logger.error(f"Missing classifier {move.name}")
-            classifier_path = os.path.join(output, "classifiers",
-                                           f"{move.name}_{timeline.general.Song}.{classifier.type}".lower())
+                logger.exception(f"Missing classifier {move.name}")
+            classifier_path = os.path.join(
+                output,
+                "classifiers",
+                f"{move.name}_{timeline.general.Song}.{classifier.type}".lower(),
+            )
             with open(classifier_path, "wb") as f:
                 f.write(classifier.data)
 

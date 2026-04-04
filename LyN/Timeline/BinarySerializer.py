@@ -1,22 +1,33 @@
 import datetime
 import functools
 import struct
+from collections.abc import Callable
 from io import BytesIO
-from typing import List, BinaryIO, Union, Tuple, Optional, Callable
+from typing import BinaryIO
 
+from ..binary_reader import BinaryReader
+from ..logger import logger
 from .__types__ import (
-    Banks, Move, Gesture, Event,
-    PictoLayer, MoveLayer, LyricsLayer, EventLayer,
-    Instance, MoveInstance, LyricsInstance, EventInstance, Timeline
+    Banks,
+    Event,
+    EventInstance,
+    EventLayer,
+    Gesture,
+    Instance,
+    LyricsInstance,
+    LyricsLayer,
+    Move,
+    MoveInstance,
+    MoveLayer,
+    PictoLayer,
+    Timeline,
 )
-from ..BinaryReader import BinaryReader
-from ..Logger import logger
 
 LEGACY_VERSION = 9
 
 
 # Decorator
-def lyn_struct(_func: Optional[Callable] = None, *, trustable: bool = False):
+def lyn_struct(_func: Callable | None = None, *, trustable: bool = False):
     def decorator(func: Callable):
         @functools.wraps(func)
         def wrapper(self, *args, **kwargs):
@@ -25,15 +36,20 @@ def lyn_struct(_func: Optional[Callable] = None, *, trustable: bool = False):
                 ret = func(self, *args, **kwargs)
             except Exception as e:
                 self._reader.seek(info.seed)  # rollback
-                logger.error(f"Error in {func.__name__}: {e}")
+                logger.exception(f"Error in {func.__name__}: {e}")
                 ret = None
             finally:
                 current = self._reader.tell()
                 end_expected = info.seed + info.size_of
                 if current < end_expected:
-                    logger.debug(f"[{func.__name__}] Struct ended early: {current} < {end_expected}")
+                    logger.debug(
+                        f"[{func.__name__}] Struct ended early:"
+                        f" {current} < {end_expected}"
+                    )
                 if current > end_expected + (8 if trustable else 0):
-                    logger.debug(f"[{func.__name__}] Struct overread: {current} > {end_expected}")
+                    logger.debug(
+                        f"[{func.__name__}] Struct overread: {current} > {end_expected}"
+                    )
                 self._reader.seek(end_expected)
             return ret
 
@@ -41,8 +57,7 @@ def lyn_struct(_func: Optional[Callable] = None, *, trustable: bool = False):
 
     if _func is None:
         return decorator
-    else:
-        return decorator(_func)
+    return decorator(_func)
 
 
 class BinarySerializer:
@@ -51,7 +66,7 @@ class BinarySerializer:
     timeline: Timeline
 
     # local state #
-    virtualstart: List[float]
+    virtualstart: list[float]
 
     def __init__(self) -> None:
         self.timeline = Timeline()
@@ -59,18 +74,20 @@ class BinarySerializer:
         self.names = []
         self.virtualstart = []
 
-    def deserialize(self, stream: Union[BinaryIO, bytes]) -> Timeline:
+    def deserialize(self, stream: BinaryIO | bytes) -> Timeline:
         if isinstance(stream, bytes):
             stream = BytesIO(stream)
         self._reader = BinaryReader("LITTLE", stream)
         self._deserialize_timeline()
         return self.timeline
 
-    # Helper functions #    
-    def get_virtual_position(self, time: Union[int, float]) -> Tuple[int, float]:
+    # Helper functions #
+    def get_virtual_position(self, time: float) -> tuple[int, float]:
         if not self.virtualstart:
             return 0, time
-        position = self.virtualstart.index(min(self.virtualstart, key=lambda item: abs(item - time)))
+        position = self.virtualstart.index(
+            min(self.virtualstart, key=lambda item: abs(item - time))
+        )
         offset = time - self.virtualstart[position]
         return position, offset
 
@@ -79,7 +96,7 @@ class BinarySerializer:
 
     # Reader functions #
     @lyn_struct
-    def _deserialize_timeline(self):
+    def _deserialize_timeline(self) -> None:
         logger.debug("Deserializing Timeline")
         self._deserialize_general()
         self._deserialize_virtual_start()
@@ -123,7 +140,9 @@ class BinarySerializer:
         self.timeline.general.WavePath = rf".\Sounds\{song}.wav"
         self.timeline.general.VideoPath = rf".\{song}\Videos\{song}.bik"
         self.timeline.general.PictoFolder = r".\Pictos"
-        logger.debug(f"Deserializing GENERAL (version {version}) (legacy {self.is_legacy()})")
+        logger.debug(
+            f"Deserializing GENERAL (version {version}) (legacy {self.is_legacy()})"
+        )
 
     @lyn_struct
     def _deserialize_virtual_start(self) -> None:
@@ -153,16 +172,18 @@ class BinarySerializer:
             logger.debug("LYRICS BANK?")
 
         elif bank == Banks.PICTO:
-            picto = self.timeline.databank.add_picto(name, len(self.timeline.databank.PictoBank))
+            self.timeline.databank.add_picto(
+                name, len(self.timeline.databank.PictoBank)
+            )
 
         elif bank == Banks.MOVE:
-            move = self._deserialize_move(name)
+            self._deserialize_move(name)
 
         elif bank == Banks.EVENTS:
-            event = self._deserialize_event(name)
+            self._deserialize_event(name)
 
         elif bank == Banks.GESTURES:
-            gesture = self._deserialize_gesture(name)
+            self._deserialize_gesture(name)
 
         else:
             logger.warning(f"UNKNOWN DATABANK {bank=}")
@@ -183,12 +204,22 @@ class BinarySerializer:
         custom_floats = self._reader.vector()
         self._reader.uint32()  # terminator?
 
-        move = self.timeline.databank.add_move(
-            name, creation_id, duration, subdivisions_in_beat, color, livemove_mul,
-            livemove_plus, slack, capacity, stability, golden_move, energy_evaluation,
-            timing_evaluation, custom_floats
+        return self.timeline.databank.add_move(
+            name,
+            creation_id,
+            duration,
+            subdivisions_in_beat,
+            color,
+            livemove_mul,
+            livemove_plus,
+            slack,
+            capacity,
+            stability,
+            golden_move,
+            energy_evaluation,
+            timing_evaluation,
+            custom_floats,
         )
-        return move
 
     def _deserialize_gesture(self, name: str) -> Gesture:
         creation_id = len(self.timeline.databank.GestureBank)
@@ -205,15 +236,25 @@ class BinarySerializer:
         timing_evaluation = bool(self._reader.uint32())
         custom_floats = self._reader.vector()
         self._reader.uint32()  # terminator?
-        gesture = self.timeline.databank.add_gesture(
-            name, creation_id, duration, subdivisions_in_beat, color,
-            gesture_mul, gesture_plus, slack, capacity, stability, golden_move,
-            energy_evaluation, timing_evaluation, custom_floats
+        return self.timeline.databank.add_gesture(
+            name,
+            creation_id,
+            duration,
+            subdivisions_in_beat,
+            color,
+            gesture_mul,
+            gesture_plus,
+            slack,
+            capacity,
+            stability,
+            golden_move,
+            energy_evaluation,
+            timing_evaluation,
+            custom_floats,
         )
         # TODO: add gesture struct
-        return gesture
 
-    def _deserialize_event(self, name: str) -> Optional[Event]:
+    def _deserialize_event(self, name: str) -> Event | None:
         info = self._reader.get_struct()
         struct_end = info.seed + info.size_of
 
@@ -238,9 +279,13 @@ class BinarySerializer:
                 param_type = None
                 display_in_timeline = 1
                 default_value = ""
-                event.add_param(param_name, param_type, display_in_timeline, default_value)
+                event.add_param(
+                    param_name, param_type, display_in_timeline, default_value
+                )
         finally:
-            self._reader.seek(info.seed + info.size_of)  # Always seek to struct end, even on error
+            self._reader.seek(
+                info.seed + info.size_of
+            )  # Always seek to struct end, even on error
 
         return event
 
@@ -255,7 +300,7 @@ class BinarySerializer:
         logger.debug(f"Deserializing LAYER {Banks.id2name(bank)} {bank}")
         if bank == Banks.PICTO:
             layer = self._deserialize_picto_layer(position)
-        elif bank == Banks.MOVE or bank == Banks.GESTURES:
+        elif bank in (Banks.MOVE, Banks.GESTURES):
             layer = self._deserialize_move_layer(position)
         elif bank == Banks.EVENTS:
             layer = self._deserialize_event_layer(position)
@@ -279,14 +324,14 @@ class BinarySerializer:
     @lyn_struct
     def _deserialize_picto_instance(self) -> Instance:
         logger.debug("Deserializing PICTO INSTANCE")
-        bank = self._reader.uint32()
+        self._reader.uint32()
         # TODO: add bank checker?
         date = self._reader.float()
         name_id = self._reader.uint32()
-        position, offset = self.get_virtual_position(date)
+        position, _offset = self.get_virtual_position(date)
         return Instance(position, self.timeline.databank.get_bank(name_id), date)
 
-    def _deserialize_move_layer(self, position: int) -> Union[MoveLayer, EventLayer]:
+    def _deserialize_move_layer(self, position: int) -> MoveLayer | EventLayer:
         entries = self._reader.uint32()
         name = self._reader.string()
 
@@ -308,14 +353,16 @@ class BinarySerializer:
     @lyn_struct
     def _deserialize_move_instance(self) -> MoveInstance:
         logger.debug("Deserializing MOVE INSTANCE")
-        bank = self._reader.uint32()
+        self._reader.uint32()
         date = self._reader.float()
         name_id = self._reader.uint32()
         duration = self._reader.float()
         gold_move = bool(self._reader.uint32())
 
-        position, offset = self.get_virtual_position(date)
-        offset_in_subdivisions = self.get_virtual_position(date + duration)[0] - position
+        position, _offset = self.get_virtual_position(date)
+        offset_in_subdivisions = (
+            self.get_virtual_position(date + duration)[0] - position
+        )
         return MoveInstance(
             position,
             self.timeline.databank.get_bank(name_id),
@@ -343,9 +390,9 @@ class BinarySerializer:
         name = self.timeline.databank.get_bank(name_id)
         length = self._reader.float()
         color = "0x00000000"
-        default_duration = self._reader.uint32()
+        self._reader.uint32()
         if self.is_legacy():
-            subdivisions_in_beat = self._reader.uint32()
+            self._reader.uint32()
         position, offset = self.get_virtual_position(date)
         event = EventInstance(position, name, offset, length, color)
         for bank in self.timeline.databank.find_bank(name):
@@ -384,10 +431,10 @@ class BinarySerializer:
     @lyn_struct(trustable=True)
     def _deserialize_lyrics_instance(self) -> LyricsInstance:
         logger.debug("Deserializing LYRICS INSTANCE")
-        bank = self._reader.uint32()
+        self._reader.uint32()
         date = self._reader.float()
         length = self._reader.float()
         text = self._reader.string(True).encode("utf-8").decode("utf-8")
 
-        position, offset = self.get_virtual_position(date)
+        position, _offset = self.get_virtual_position(date)
         return LyricsInstance(position, "Lyrics", date, length, text)

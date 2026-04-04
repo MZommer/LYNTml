@@ -1,6 +1,6 @@
 # Songs folder
-src/input/*
-src/output/*
+input/*
+output/*
 *.bin
 *.wog
 *.mat

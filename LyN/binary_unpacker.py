@@ -1,10 +1,10 @@
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, BinaryIO
+from typing import BinaryIO
 
 from .BinaryReader import BinaryReader
-from .Logger import logger
+from .logger import logger
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,10 +14,10 @@ class FileID:
     def __str__(self) -> str:
         return f"{self.id:x}"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"FileID({self})"
 
-    def __int__(self):
+    def __int__(self) -> int:
         return self.id
 
 
@@ -34,10 +34,10 @@ class File:
         self.data = data
         self._resolve_type()
 
-    def _resolve_type(self):
-        if b"\xDE\xC0\xDE\xC0" in self.data:
+    def _resolve_type(self) -> None:
+        if b"\xde\xc0\xde\xc0" in self.data:
             self.type = "wog"
-        elif b"\xEF\xC0\xDE\xC0" in self.data:
+        elif b"\xef\xc0\xde\xc0" in self.data:
             self.type = "mat"
         elif b"AiLive" in self.data:
             # Live Move Classifier
@@ -50,23 +50,23 @@ class File:
             self.type = "wav"
         else:
             self.type = "bin"
-        # TODO: Identify other datatypes    
-
-    def __repr__(self) -> str:
-        return f"File(ID={self.id}, Type={self.type} Size={self.size}, Data=bytes[{len(self.data)}])"
+        # TODO: Identify other datatypes
 
 
 class Unpacker:
-    files: List[File]
+    files: list[File]
 
-    def __init__(self, file_path: Optional[os.PathLike] = None, stream: Optional[BinaryIO] = None) -> None:
+    def __init__(
+        self, file_path: os.PathLike | None = None, stream: BinaryIO | None = None
+    ) -> None:
         self.files = []
         if file_path:
             stream = open(file_path, "rb")
         if stream:
             self.from_stream(stream)
         else:
-            raise ValueError("Either 'file_path' or 'stream' must be provided.")
+            msg = "Either 'file_path' or 'stream' must be provided."
+            raise ValueError(msg)
 
     def from_stream(self, stream: BinaryIO) -> None:
         reader = BinaryReader("LITTLE", stream)

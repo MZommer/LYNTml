@@ -1,5 +1,6 @@
-"""Script for filtering the bins in the bf"""
+"""Script for filtering the bins in the bf."""
 
+import contextlib
 import os
 import shutil
 
@@ -10,12 +11,8 @@ os.makedirs("output", exist_ok=True)
 
 for file in os.listdir("./input"):
     if os.path.isfile("./input/" + file):
-        print(file)
         tml = LynTML()
-        try:
+        with contextlib.suppress(Exception):
             tml.deserialize("./input/" + file, True)
-        except:
-            pass
         if tml.CodeName != "":
-            print(f"{tml.CodeName} Found!")
             shutil.copy("./input/" + file, f"./output/({tml.CodeName}){file}")

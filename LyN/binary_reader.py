@@ -1,7 +1,8 @@
 import struct
+from collections.abc import Callable
 from dataclasses import dataclass
 from queue import LifoQueue
-from typing import Literal, BinaryIO, Optional, Callable, List, Union
+from typing import BinaryIO, Literal
 
 
 @dataclass
@@ -11,7 +12,7 @@ class StructInfo:
 
 
 class BinaryReader:
-    def __init__(self, endianess: Literal["BIG", "LITTLE"], file_stream: BinaryIO):
+    def __init__(self, endianess: Literal["BIG", "LITTLE"], file_stream: BinaryIO) -> None:
         self.stack = LifoQueue()
         self.endianess_marker = "<"
         if endianess == "BIG":
@@ -22,8 +23,7 @@ class BinaryReader:
     def init_struct(self):
         seed = self.tell()
         size_of = self.uint32()
-        info = self.put_struct(seed, size_of)
-        return info
+        return self.put_struct(seed, size_of)
 
     def put_struct(self, seed: int, size_of: int) -> StructInfo:
         info = StructInfo(seed, size_of)
@@ -33,10 +33,10 @@ class BinaryReader:
     def get_struct(self):
         return self.stack.get()
 
-    def vector(self, size: Optional[int] = None) -> List[float]:
+    def vector(self, size: int | None = None) -> list[float]:
         return [self.float() for _ in range(size or self.uint32())]
 
-    def array(self, function: Callable) -> List:
+    def array(self, function: Callable) -> list:
         return [function() for _ in range(self.uint32())]
 
     def uint64(self) -> int:
@@ -66,7 +66,7 @@ class BinaryReader:
     def bool(self) -> bool:
         return struct.unpack(self.endianess_marker + "?", self.file_stream.read(1))[0]
 
-    def float(self, do_round=True) -> Union[float, int]:
+    def float(self, do_round=True) -> float | int:
         value = struct.unpack(self.endianess_marker + "f", self.file_stream.read(4))[0]
         if do_round:
             value = round(value, 7)
@@ -83,7 +83,11 @@ class BinaryReader:
         size = self.ushort()
         is_unicode = self.ushort()
         if is_unicode:
-            string = self.file_stream.read(size).rstrip(b"\x00").decode("utf-16", "backslashreplace")
+            string = (
+                self.file_stream.read(size)
+                .rstrip(b"\x00")
+                .decode("utf-16", "backslashreplace")
+            )
             arr = string.split(r"\x")
             for index, i in enumerate(arr):
                 if index == 0:
@@ -98,13 +102,13 @@ class BinaryReader:
     def tell(self) -> int:
         return self.file_stream.tell()
 
-    def seek(self, offset: int, whence: int = 0):
+    def seek(self, offset: int, whence: int = 0) -> None:
         self.file_stream.seek(offset, whence)
 
-    def close(self):
+    def close(self) -> None:
         self.file_stream.close()
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.close()
 
     def __enter__(self):
