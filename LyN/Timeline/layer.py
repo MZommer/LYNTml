@@ -10,10 +10,12 @@ from core.serializers.xml import (
 
 
 class LayerType(StrEnum):
-    EVENTS = "Events"
-    PICTO = "Picto"
     MOVE = "Move"
+    PICTO = "Picto"
     LYRICS = "Lyrics"
+    EVENTS = "Events"
+    SEQUENCE = "Sequence"
+    KINECTMOVE = "KinectMove"
 
 
 class Instance(XMLElement):
@@ -26,7 +28,7 @@ class Instance(XMLElement):
         return "Instance"
 
 
-class Layer(XMLElement):
+class Layer(XMLElement, discriminator="type"):
     name: XMLAttribute[str]
     type: XMLAttribute[LayerType]
     position: XMLAttribute[int]
@@ -47,7 +49,7 @@ class MoveInstance(Instance):
     OffsetInSubdivisions: XMLSubElement[int]
 
 
-class MoveLayer(Layer):
+class MoveLayer(Layer, discriminator_value=LayerType.MOVE):
     type: XMLAttribute[LayerType] = LayerType.MOVE
     instances: XMLSiblingCollection[MoveInstance]
 
@@ -58,7 +60,7 @@ class LyricsInstance(Instance):
     Text: XMLSubElement[str]
 
 
-class LyricsLayer(Layer):
+class LyricsLayer(Layer, discriminator_value=LayerType.LYRICS):
     type: XMLAttribute[LayerType] = LayerType.LYRICS
     instances: XMLSiblingCollection[LyricsInstance]
 
@@ -75,6 +77,6 @@ class EventInstance(Instance):
     Params: XMLElementCollection[Param]
 
 
-class EventsLayer(Layer):
+class EventsLayer(Layer, discriminator_value=LayerType.EVENTS):
     type: XMLAttribute[LayerType] = LayerType.EVENTS
     instances: XMLSiblingCollection[EventInstance]

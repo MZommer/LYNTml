@@ -1,3 +1,4 @@
+from abc import ABC
 from typing import Any, get_args, get_origin
 
 
@@ -8,11 +9,10 @@ def parse_bool(raw: str) -> bool:
         case "false" | "0" | "no":
             return False
         case _:
-            msg = f"Cannot convert {raw!r} to bool"
-            raise ValueError(msg)
+            raise ValueError(f"Cannot convert {raw!r} to bool")
 
 
-def type_arg(annotation) -> type:
+def type_arg[T](annotation: type[T]) -> type[T]:
     # TODO: Add typing??
     if not (args := get_args(annotation)):
         msg = f"Missing type parameter in {annotation!r}"
@@ -22,6 +22,22 @@ def type_arg(annotation) -> type:
 
 def is_descriptor(obj: Any) -> bool:
     return hasattr(type(obj), "__set__") or hasattr(type(obj), "__get__")
+
+
+def all_hints(cls: type) -> dict:
+    """Collect annotations from cls and all its XMLElement bases in MRO order,
+    with subclass annotations taking precedence (subclass appears earlier in MRO,
+    so we iterate reversed to let later entries overwrite earlier ones).
+    Stops at — and excludes — XMLElement itself so framework internals are never
+    included in field hints.
+    """
+    hints: dict = {}
+    for base in reversed(cls.__mro__):
+        # Stop before XMLElement so its own class-level attrs aren't treated as fields.
+        if base.__name__ == "XMLElement" or base is object or base is ABC:
+            continue
+        hints.update(vars(base).get("__annotations__", {}))
+    return hints
 
 
 def resolve_dtype(dtype: type) -> tuple[bool, type]:
@@ -45,26 +61,19 @@ def typecheck(value: Any, dtype: type, field: str = "") -> None:
     prefix = f"{field}: " if field else ""
     if is_seq:
         if not isinstance(value, list):
-            msg = (
+            raise TypeError(
                 f"{prefix}expected list[{item_type.__name__}],"
                 " got {type(value).__name__}"
             )
-            raise TypeError(
-                msg
-            )
         for i, v in enumerate(value):
             if not isinstance(v, item_type):
-                msg = (
+                raise TypeError(
                     f"{prefix}list item [{i}]: expected {item_type.__name__}, "
                     f"got {type(v).__name__}"
                 )
-                raise TypeError(
-                    msg
-                )
     elif not isinstance(value, dtype):
-        msg = f"{prefix}expected {dtype.__name__}, got {type(value).__name__}"
         raise TypeError(
-            msg
+            f"{prefix}expected {dtype.__name__}, got {type(value).__name__}"
         )
 
 

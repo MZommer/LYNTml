@@ -19,7 +19,6 @@ os.makedirs(output_dir, exist_ok=True)
 for file in os.listdir(input_dir):
     input_file = input_dir / file
     if input_file.is_file():
-
         name = input_file.stem
         os.makedirs(output_dir / name, exist_ok=True)
 

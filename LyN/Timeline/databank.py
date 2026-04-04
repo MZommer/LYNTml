@@ -12,8 +12,8 @@ class Banks(IntEnum):
     LYRICS = 0
     PICTO = 1
     MOVE = 2
-    EVENTS = 3
-    # _UNK = 4
+    EVENT = 3
+    SEQUENCE = 4
     GESTURE = 5
 
     @property
@@ -42,6 +42,7 @@ class Move(BankEntry):
     EnergyEvaluation: XMLSubElement[bool]
     TimingEvaluation: XMLSubElement[bool]
     CustomFloats: XMLSubElement[list[float]]
+    # TODO: CustomInts also present in the binary
 
 
 class Param(XMLElement):

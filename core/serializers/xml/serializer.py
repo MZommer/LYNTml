@@ -9,7 +9,7 @@ from .descriptors import (
     XMLSubElement,
 )
 from .elements import XMLElement
-from .utils import from_str, type_arg
+from .utils import all_hints, from_str, resolve_dtype, type_arg
 from .wrappers import Attribute, CollectionValue, SubElement
 
 
@@ -42,7 +42,7 @@ class XMLSerializer:
         self.encoding = encoding
         self.xml_declaration = xml_declaration
 
-    def to_et(self, element: XMLElement) -> ET.Element:
+    def to_et[T: XMLElement](self, element: T) -> ET.Element:
         """Serialize an XMLElement to an ET.Element tree."""
         el = ET.Element(element.tag)
         hints = vars(type(element)).get("__annotations__", {})
@@ -75,7 +75,7 @@ class XMLSerializer:
 
         return el
 
-    def to_string(self, element: XMLElement) -> str:
+    def to_string[T: XMLElement](self, element: T) -> str:
         """Return a formatted XML string."""
         tree = self.to_et(element)
         ET.indent(tree, space=self.indent)
@@ -91,10 +91,17 @@ class XMLSerializer:
             path, encoding=self.encoding, xml_declaration=self.xml_declaration
         )
 
-    def from_et(self, cls: type[XMLElement], el: ET.Element) -> XMLElement:
-        """Deserialize an ET.Element into an instance of cls."""
+    def from_et[T: XMLElement](self, cls: type[T], el: ET.Element) -> T:
+        # -- Polymorphic dispatch --
+        # If cls is a discriminator root, look up the concrete subclass from
+        # the element's discriminator attribute before doing anything else.
+        disc_attr = getattr(cls, "_discriminator_attr", None)
+        if disc_attr and getattr(cls, "_discriminator_root", None) is cls:
+            disc_val = el.get(disc_attr)
+            cls = cls._discriminator_registry.get(disc_val, cls)
+
         obj = cls.__new__(cls)
-        hints = vars(cls).get("__annotations__", {})
+        hints = all_hints(cls)  # includes inherited fields from all bases
 
         for field, ann in hints.items():
             origin = get_origin(ann)
@@ -102,10 +109,14 @@ class XMLSerializer:
             if origin is XMLSubElement:
                 dtype = type_arg(ann)
                 child = el.find(field)
-                if child is not None and child.text is not None:
-                    obj.__dict__[f"__sub_{field}"] = SubElement(
-                        field, from_str(child.text.strip(), dtype), dtype
-                    )
+                if child is not None:
+                    # For list[T] fields an empty element (<Tag />) decodes to []
+                    raw = child.text.strip() if child.text else ""
+                    is_seq, _ = resolve_dtype(dtype)
+                    if raw or is_seq:
+                        obj.__dict__[f"__sub_{field}"] = SubElement(
+                            field, from_str(raw, dtype), dtype
+                        )
 
             elif origin is XMLAttribute:
                 dtype = type_arg(ann)
@@ -137,10 +148,10 @@ class XMLSerializer:
 
         return obj
 
-    def from_string(self, cls: type[XMLElement], xml_str: str) -> XMLElement:
+    def from_string[T: XMLElement](self, cls: type[T], xml_str: str) -> T:
         """Deserialize from a XML string."""
         return self.from_et(cls, ET.fromstring(xml_str))
 
-    def from_file(self, cls: type[XMLElement], path: str | PathLike) -> XMLElement:
+    def from_file[T: XMLElement](self, cls: type[T], path: str | PathLike) -> T:
         """Deserialize from a file on disk."""
         return self.from_et(cls, ET.parse(path).getroot())

@@ -36,9 +36,7 @@ class CollectionValue[T]:
                 f"Collection expects {self._item_type.__name__}, "
                 f"got {type(item).__name__}"
             )
-            raise TypeError(
-                msg
-            )
+            raise TypeError(msg)
 
     def append(self, item: T) -> None:
         self._check_type(item)

@@ -23,14 +23,14 @@ class General(XMLElement):
     BeatsPerMeasure: XMLSubElement[int]
     FirstMeasureMarkerPos: XMLSubElement[int]
     WaveNbSamples: XMLSubElement[int]
-    WavePath: XMLSubElement[str]
-    VideoPath: XMLSubElement[str]
-    PictoFolder: XMLSubElement[str]
+    WavePath: XMLSubElement[str] = r".\Sounds\{Song}.wav"
+    VideoPath: XMLSubElement[str] = r"\{Song}\Videos\{Song}.bik"
+    PictoFolder: XMLSubElement[str] = r".\Pictos"
     CustomScoreSteps: XMLSubElement[bool]
     ScoreSteps: XMLElementCollection[ScoreStep] = (
-        ScoreStep(name="X", value=1),
-        ScoreStep(name="Ok", value=25),
-        ScoreStep(name="Good", value=50),
-        ScoreStep(name="Great", value=75),
-        ScoreStep(name="Perfect", value=100),
+        ScoreStep(Name="X", Value=1),
+        ScoreStep(Name="Ok", Value=25),
+        ScoreStep(Name="Good", Value=50),
+        ScoreStep(Name="Great", Value=75),
+        ScoreStep(Name="Perfect", Value=100),
     )

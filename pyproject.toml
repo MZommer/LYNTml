@@ -3,7 +3,7 @@ name = "lynpy"
 version = "0.1.0"
 description = "Project to handle LYN Engine files"
 authors = [
-    {name = "Matias Zommer"}
+    { name = "Matias Zommer" }
 ]
 readme = "README.md"
 requires-python = ">=3.12"
@@ -38,20 +38,21 @@ unfixable = [
 ]
 ignore = [
     "COM812", # Conflicts with formatter (trailing comma)
-    "D100",   # Missing docstring in public module
-    "D101",   # Missing docstring in public class
-    "D102",   # Missing docstring in public method
-    "D103",   # Missing docstring in public function
-    "D104",   # Missing docstring in public package
-    "D105",   # Missing docstring in magic method
-    "D106",   # Missing docstring in public nested class
-    "D107",   # Missing docstring in __init__
-    "D203",   # One blank line before class docstring (conflicts with D211)
-    "D213",   # Multi-line summary on second line (conflicts with D212)
-    "E501",   # Line length (otherwise enforced by formatter)
+    "D100", # Missing docstring in public module
+    "D101", # Missing docstring in public class
+    "D102", # Missing docstring in public method
+    "D103", # Missing docstring in public function
+    "D104", # Missing docstring in public package
+    "D105", # Missing docstring in magic method
+    "D106", # Missing docstring in public nested class
+    "D107", # Missing docstring in __init__
+    "D203", # One blank line before class docstring (conflicts with D211)
+    "D213", # Multi-line summary on second line (conflicts with D212)
+    "E501", # Line length (otherwise enforced by formatter)
     "FIX002", # Prevents TODO comments, which are useful
     "ISC001", # Conflicts with formatter
-    "TD002",  # Prevents authorless TODO comments, which is annoying
+    "TD002", # Prevents authorless TODO comments, which is annoying
+    "PTH", # Force PathLib
 ]
 
 [tool.pyrefly]

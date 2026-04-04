@@ -12,7 +12,9 @@ class StructInfo:
 
 
 class BinaryReader:
-    def __init__(self, endianess: Literal["BIG", "LITTLE"], file_stream: BinaryIO) -> None:
+    def __init__(
+        self, endianess: Literal["BIG", "LITTLE"], file_stream: BinaryIO
+    ) -> None:
         self.stack = LifoQueue()
         self.endianess_marker = "<"
         if endianess == "BIG":

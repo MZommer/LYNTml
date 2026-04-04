@@ -1,6 +1,6 @@
 from typing import get_args
 
-from .utils import type_arg, typecheck
+from .utils import all_hints, type_arg, typecheck
 from .wrappers import Attribute, CollectionValue, SubElement
 
 
@@ -12,16 +12,15 @@ class XMLSubElement[T]:
         self._slot = f"__sub_{name}"
 
     def _dtype(self, owner: type) -> type[T]:
-        return type_arg(vars(owner)["__annotations__"][self._field])
+        return type_arg(all_hints(owner)[self._field])
 
     def __get__(self, obj, objtype=None) -> SubElement[T]:
         if obj is None:
             return self
         value = obj.__dict__.get(self._slot)
         if value is None:
-            msg = f"'{objtype.__name__}.{self._field}' has not been set."
             raise AttributeError(
-                msg
+                f"'{objtype.__name__}.{self._field}' has not been set."
             )
         # TODO: Worth checking `value`'s type?
         return value
@@ -40,16 +39,15 @@ class XMLAttribute[T]:
         self._slot = f"__attr_{name}"
 
     def _dtype(self, owner: type) -> type[T]:
-        return type_arg(vars(owner)["__annotations__"][self._field])
+        return type_arg(all_hints(owner)[self._field])
 
     def __get__(self, obj, objtype=None) -> Attribute[T]:
         if obj is None:
             return self
         value = obj.__dict__.get(self._slot)
         if value is None:
-            msg = f"'{objtype.__name__}.{self._field}' has not been set."
             raise AttributeError(
-                msg
+                f"'{objtype.__name__}.{self._field}' has not been set."
             )
         return value
 
@@ -86,12 +84,9 @@ class XMLElementCollection[T]:
         return value
 
     def __set__(self, _obj, _) -> None:
-        msg = (
+        raise AttributeError(
             f"Use {self._field}.append() / .extend()"
             " — direct assignment is not allowed."
-        )
-        raise AttributeError(
-            msg
         )
 
 
@@ -129,10 +124,7 @@ class XMLSiblingCollection[T]:
         return value
 
     def __set__(self, _obj, _) -> None:
-        msg = (
+        raise AttributeError(
             f"Use {self._field}.append() / .extend()"
             " — direct assignment is not allowed."
-        )
-        raise AttributeError(
-            msg
         )
