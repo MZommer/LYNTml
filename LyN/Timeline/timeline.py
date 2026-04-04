@@ -5,6 +5,7 @@ from core.serializers.xml import (
     XMLSiblingCollection,
 )
 
+from .databank import DataBank
 from .general import General
 from .layer import Layer
 from .markerlist import Marker
@@ -14,6 +15,7 @@ class Partition(XMLElement):
     __lower_tag__ = False
 
     general: General
+    databank: DataBank
     markerlist: XMLElementCollection[Marker]
     layers: XMLSiblingCollection[Layer]
 

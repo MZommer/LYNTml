@@ -1,7 +1,7 @@
 from io import BytesIO
 
-from .BinaryReader import BinaryReader
-from .BinaryUnpacker import FileID
+from .binary_reader import BinaryReader
+from .binary_unpacker import FileID
 
 
 def table_reader(data: bytes) -> tuple[tuple[FileID, ...], FileID]:
@@ -21,6 +21,7 @@ def table_reader(data: bytes) -> tuple[tuple[FileID, ...], FileID]:
     if unk2 != 77:
         msg = "Unexpected value for unk2"
         raise Exception(msg)
+    # I think this are all int16 values
 
     _files = binary_reader.ushort()
 
