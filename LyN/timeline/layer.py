@@ -47,6 +47,7 @@ class PictoLayer(Layer):
 class MoveInstance(Instance):
     duration: XMLAttribute[float]
     OffsetInSubdivisions: XMLSubElement[int]
+    GoldMove: XMLSubElement[bool]
 
 
 class MoveLayer(Layer, discriminator_value=LayerType.MOVE):

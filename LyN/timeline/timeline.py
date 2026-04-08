@@ -21,9 +21,9 @@ class Partition(XMLElement):
 
 
 class JustDanceToolLD(XMLElement):
-    version: XMLAttribute[int] = 15
-    MajorVersion: XMLAttribute[int] = 0
-    MinorVersion: XMLAttribute[int] = 0
-    LastEditorUsed: XMLAttribute[int] = 128
-
     partition: Partition
+
+    version: XMLAttribute[float] = 15.0
+    MajorVersion: XMLAttribute[float] = 0.0
+    MinorVersion: XMLAttribute[float] = 0.0
+    LastEditorUsed: XMLAttribute[float] = 128.0

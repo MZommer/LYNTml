@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import get_args
 
 from .utils import all_hints, type_arg, typecheck
@@ -11,22 +13,18 @@ class XMLSubElement[T]:
         self._field = name
         self._slot = f"__sub_{name}"
 
-    def _dtype(self, owner: type) -> type[T]:
-        return type_arg(all_hints(owner)[self._field])
-
-    def __get__(self, obj, objtype=None) -> SubElement[T]:
+    def __get__(self, obj, objtype=None) -> T:
         if obj is None:
             return self
-        value = obj.__dict__.get(self._slot)
-        if value is None:
+        wrapper: SubElement[T] = obj.__dict__.get(self._slot)
+        if wrapper is None:
             raise AttributeError(
                 f"'{objtype.__name__}.{self._field}' has not been set."
             )
-        # TODO: Worth checking `value`'s type?
-        return value
+        return wrapper.value
 
     def __set__(self, obj, value: T) -> None:
-        dtype = self._dtype(type(obj))
+        dtype = type_arg(all_hints(type(obj))[self._field])
         typecheck(value, dtype, field=f"{type(obj).__name__}.{self._field}")
         obj.__dict__[self._slot] = SubElement(self._field, value, dtype)
 
@@ -38,21 +36,18 @@ class XMLAttribute[T]:
         self._field = name
         self._slot = f"__attr_{name}"
 
-    def _dtype(self, owner: type) -> type[T]:
-        return type_arg(all_hints(owner)[self._field])
-
-    def __get__(self, obj, objtype=None) -> Attribute[T]:
+    def __get__(self, obj, objtype=None) -> T:
         if obj is None:
             return self
-        value = obj.__dict__.get(self._slot)
-        if value is None:
+        wrapper: Attribute[T] = obj.__dict__.get(self._slot)
+        if wrapper is None:
             raise AttributeError(
                 f"'{objtype.__name__}.{self._field}' has not been set."
             )
-        return value
+        return wrapper.value
 
     def __set__(self, obj, value: T) -> None:
-        dtype = self._dtype(type(obj))
+        dtype = type_arg(all_hints(type(obj))[self._field])
         typecheck(value, dtype, field=f"{type(obj).__name__}.{self._field}")
         obj.__dict__[self._slot] = Attribute(self._field, value, dtype)
 

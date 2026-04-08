@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO
 
-from .BinaryReader import BinaryReader
-from .logger import logger
+from core.logger import logger
+from core.serializers.binary import BinaryReader, ByteOrder
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,7 +57,9 @@ class Unpacker:
     files: list[File]
 
     def __init__(
-        self, file_path: os.PathLike | None = None, stream: BinaryIO | None = None
+        self,
+        file_path: os.PathLike | None = None,
+        stream: BinaryIO | None = None,
     ) -> None:
         self.files = []
         if file_path:
@@ -69,7 +71,7 @@ class Unpacker:
             raise ValueError(msg)
 
     def from_stream(self, stream: BinaryIO) -> None:
-        reader = BinaryReader("LITTLE", stream)
+        reader = BinaryReader(ByteOrder.LITTLE, stream)
 
         while reader:
             file_id = reader.uint32()
@@ -80,9 +82,9 @@ class Unpacker:
             file_data = reader.raw(file_size)
             self.files.append(File(file_id, file_size, file_data))
             # TODO: update to a pointer system to avoid memory flood
-            # But also involves in updating the API
+            # This involves in updating the API
 
-    def save_all(self, path: str) -> None:
+    def save_all(self, path: os.PathLike) -> None:
         base_path = Path(path)
         base_path.mkdir(parents=True, exist_ok=True)  # ensure folder exists
         for idx, file in enumerate(self.files):

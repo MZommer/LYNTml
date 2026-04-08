@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Any, get_origin
+from typing import Any, dataclass_transform, get_origin
 
 from .descriptors import (
     XMLAttribute,
@@ -80,6 +80,7 @@ def _make_init(
     return ns["__init__"]
 
 
+@dataclass_transform()
 class XMLElement(ABC):
     """Base for all XML-mapped elements.
 
@@ -196,6 +197,5 @@ class XMLElement(ABC):
     @property
     def tag(self) -> str:
         # Subtypes registered under a discriminator root emit the ROOT's tag,
-        # so <Layer .../> is always the element name regardless of MoveLayer vs EventsLayer.
         root = getattr(type(self), "_discriminator_root", None)
-        return root.__name__ if root else type(self).__name__
+        return root.__name__ if root else self.__class__.__name__

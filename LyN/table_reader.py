@@ -1,11 +1,12 @@
 from io import BytesIO
 
-from .binary_reader import BinaryReader
+from core.serializers.binary import BinaryReader, ByteOrder
+
 from .binary_unpacker import FileID
 
 
 def table_reader(data: bytes) -> tuple[tuple[FileID, ...], FileID]:
-    binary_reader = BinaryReader("LITTLE", BytesIO(data))
+    binary_reader = BinaryReader(ByteOrder.LITTLE, BytesIO(data))
 
     _size_of = binary_reader.uint32()
 

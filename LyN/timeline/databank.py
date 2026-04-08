@@ -14,7 +14,7 @@ class Banks(IntEnum):
     MOVE = 2
     EVENT = 3
     SEQUENCE = 4
-    GESTURE = 5
+    KINECTMOVE = 5  # Or Storyboard in legacy
 
     @property
     def name(self) -> str:
@@ -42,7 +42,7 @@ class Move(BankEntry):
     EnergyEvaluation: XMLSubElement[bool]
     TimingEvaluation: XMLSubElement[bool]
     CustomFloats: XMLSubElement[list[float]]
-    # TODO: CustomInts also present in the binary
+    CustomInts: XMLSubElement[list[int]]
 
 
 class Param(XMLElement):
@@ -53,7 +53,7 @@ class Param(XMLElement):
 
 
 class Event(BankEntry):
-    DefaultDuration: XMLSubElement[float]
+    DefaultDuration: XMLSubElement[int]
     SubdivisionsInBeat: XMLSubElement[int]
     Params: XMLElementCollection[Param]
 
@@ -73,11 +73,12 @@ class KinectMove(BankEntry):
     GoldenMove: XMLSubElement[bool]
     EnergyEvaluation: XMLSubElement[bool]
     TimingEvaluation: XMLSubElement[bool]
-    # TODO: Find missing values (around 4)
-    # ScoreScale
-    # ScoreSmoothing
-    # ScoreMode
-    # Taken from UAF 2014
+    CustomFloats: XMLSubElement[list[float]]
+    CustomInts: XMLSubElement[list[int]]
+    ScoreOffset: XMLSubElement[float]
+    ScoreScale: XMLSubElement[float]
+    ScoreSmooth: XMLSubElement[float]
+    ScoringMode: XMLSubElement[int]
 
 
 class DataBank(XMLElement):
@@ -88,3 +89,15 @@ class DataBank(XMLElement):
     EventsBank: XMLElementCollection[Event]
     LyricsBank: XMLElementCollection[Lyrics]
     KinectMoveBank: XMLElementCollection[KinectMove]
+
+    def add_entry(self, entry: Picto | Move | Event | KinectMove) -> None:
+        if isinstance(entry, Picto):
+            self.PictoBank.append(entry)
+        elif isinstance(entry, Move):
+            self.MoveBank.append(entry)
+        elif isinstance(entry, Event):
+            self.EventsBank.append(entry)
+        elif isinstance(entry, KinectMove):
+            self.KinectMoveBank.append(entry)
+        else:
+            raise ValueError(f"Unknown data bank entry of type {type(entry)}")

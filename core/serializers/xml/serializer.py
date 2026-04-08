@@ -83,7 +83,7 @@ class XMLSerializer:
             tree, encoding=self.encoding, xml_declaration=self.xml_declaration
         )
 
-    def to_file(self, element: XMLElement, path: str) -> None:
+    def to_file(self, element: XMLElement, path: PathLike) -> None:
         """Write an element tree to a file."""
         el = self.to_et(element)
         ET.indent(el, space=self.indent)
@@ -152,6 +152,6 @@ class XMLSerializer:
         """Deserialize from a XML string."""
         return self.from_et(cls, ET.fromstring(xml_str))
 
-    def from_file[T: XMLElement](self, cls: type[T], path: str | PathLike) -> T:
+    def from_file[T: XMLElement](self, cls: type[T], path: PathLike) -> T:
         """Deserialize from a file on disk."""
         return self.from_et(cls, ET.parse(path).getroot())

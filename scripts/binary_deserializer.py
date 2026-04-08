@@ -1,11 +1,12 @@
 from pathlib import Path
 
+from core.logger import logger
+from core.serializers.xml import XMLSerializer
 from LyN.binary_unpacker import Unpacker
 from LyN.bluestar_converter import BlueStarConverter
-from LyN.logger import logger
+from LyN.serializers.binary.timeline_serializer import TimelineSerializer
 from LyN.table_reader import table_reader
-from LyN.Timeline.BinarySerializer import BinarySerializer
-from LyN.Timeline.timeline import JustDanceToolLD
+from LyN.timeline.timeline import JustDanceToolLD
 
 try:
     import BlueStar
@@ -19,7 +20,6 @@ import shutil
 def unpack_and_decode(file: os.PathLike, output: os.PathLike) -> JustDanceToolLD:
     output = Path(output)
     unpacker = Unpacker(file)
-
     _header, table, *files = unpacker.files
 
     os.makedirs(output / "bin", exist_ok=True)
@@ -31,22 +31,21 @@ def unpack_and_decode(file: os.PathLike, output: os.PathLike) -> JustDanceToolLD
     classifiers = tuple(file for file in files if file.id in classifiers_id)
     timeline_file = next(file for file in files if file.id == timeline_id)
 
-    serializer = BinarySerializer()
+    serializer = TimelineSerializer()
     timeline = serializer.deserialize(timeline_file.data)
-
-    timeline.write(output / f"{timeline.general.Song}.tml")
-    os.makedirs(output / "classifiers", exist_ok=True)
-
-    for move in timeline.databank.MoveBank:
+    xml_serializer = XMLSerializer()
+    xml_serializer.to_file(timeline, output / f"{timeline.partition.general.Song}.tml")
+    classifiers_dir = output / "classifiers"
+    classifiers_dir.mkdir(exist_ok=True)
+    for idx, move in enumerate(timeline.partition.databank.MoveBank):
         try:
-            classifier = classifiers[move.CreationId]
+            classifier = classifiers[idx]
         except IndexError:
             logger.exception(f"Missing classifier {move.name}")
             continue
-        classifier_path = os.path.join(
-            output,
-            "classifiers",
-            f"{move.name}_{timeline.general.Song}.{classifier.type}".lower(),
+        classifier_path = (
+            classifiers_dir
+            / f"{move.name}_{timeline.partition.general.Song}.{classifier.type}".lower()
         )
         with open(classifier_path, "wb") as f:
             f.write(classifier.data)
@@ -57,23 +56,25 @@ def unpack_and_decode(file: os.PathLike, output: os.PathLike) -> JustDanceToolLD
 def main() -> None:
     input_dir = Path("input")
     output_dir = Path("output")
-    os.makedirs(input_dir, exist_ok=True)
-    os.makedirs(output_dir, exist_ok=True)
+    input_dir.mkdir(exist_ok=True)
+    output_dir.mkdir(exist_ok=True)
 
     for file in os.listdir(input_dir):
         input_file = input_dir / file
         if input_file.is_file():
             name = input_file.stem
-            os.makedirs(output_dir / name, exist_ok=True)
+            (output_dir / name).mkdir(exist_ok=True)
 
             timeline = unpack_and_decode(input_dir / file, output_dir / name)
             bluestar = BlueStarConverter(timeline)
 
             song_dir = output_dir / timeline.partition.general.Song
-            os.makedirs(song_dir, exist_ok=True)
+            song_dir.mkdir(exist_ok=True)
 
             with open(
-                song_dir / f"{timeline.general.Song}.json", "w", encoding="utf-8"
+                song_dir / f"{timeline.partition.general.Song}.json",
+                "w",
+                encoding="utf-8",
             ) as f:
                 json.dump(bluestar.main, f, ensure_ascii=False)
             for index, move in enumerate(bluestar.moves):
@@ -93,13 +94,13 @@ def main() -> None:
                     ) as f:
                         json.dump(move, f)
 
-            os.makedirs(song_dir / "pictos", exist_ok=True)
-            os.makedirs(song_dir / "classifiers" / "wiiu", exist_ok=True)
+            (song_dir / "pictos").mkdir(exist_ok=True)
+            (song_dir / "classifiers" / "wiiu").mkdir(parents=True, exist_ok=True)
             if len(timeline.partition.databank.KinectMoveBank):
-                os.makedirs(song_dir / "classifiers" / "x360", exist_ok=True)
-                os.makedirs(song_dir / "classifiers" / "orbis", exist_ok=True)
-                os.makedirs(song_dir / "classifiers" / "durango", exist_ok=True)
-                os.makedirs(song_dir / "classifiers" / "posenet", exist_ok=True)
+                (song_dir / "classifiers" / "x360").mkdir(exist_ok=True)
+                (song_dir / "classifiers" / "orbis").mkdir(exist_ok=True)
+                (song_dir / "classifiers" / "durango").mkdir(exist_ok=True)
+                (song_dir / "classifiers" / "posenet").mkdir(exist_ok=True)
 
             for picto in timeline.partition.databank.PictoBank:
                 shutil.copy(
@@ -113,14 +114,14 @@ def main() -> None:
                     song_dir
                     / "classifiers"
                     / "wiiu"
-                    / f"{timeline.general.Song.lower()}_{move.name}.msm",
+                    / f"{timeline.partition.general.Song.lower()}_{move.name}.msm",
                 )
 
             for _gesture in timeline.partition.databank.KinectMoveBank:
                 pass  # TODO: add generic gesture
 
             if BlueStar:
-                os.makedirs(song_dir / "UAF", exist_ok=True)
+                (song_dir / "UAF").mkdir(exist_ok=True)
                 song = BlueStar.Song(
                     **bluestar.main,
                     moves=bluestar.moves,
@@ -128,9 +129,9 @@ def main() -> None:
                 )
                 song.makeUAF()
                 uaf_path = song_dir / "UAF" / bluestar.main["MapName"]
-                os.makedirs(uaf_path / "timeline", exist_ok=True)
-                os.makedirs(uaf_path / "audio", exist_ok=True)
-                os.makedirs(uaf_path / "cinematics", exist_ok=True)
+                (uaf_path / "timeline").mkdir(exist_ok=True)
+                (uaf_path / "audio").mkdir(exist_ok=True)
+                (uaf_path / "cinematics").mkdir(exist_ok=True)
                 mapname = bluestar.main["MapName"].lower()
                 with open(
                     uaf_path / "timeline" / f"{mapname}_tml_dance.dtape.ckd",
@@ -157,7 +158,7 @@ def main() -> None:
                 ) as f:
                     json.dump(song.musictrack, f, ensure_ascii=False)
                 if song.ambtpls:
-                    os.makedirs(uaf_path / "audio" / "amb", exist_ok=True)
+                    (uaf_path / "audio" / "amb").mkdir(exist_ok=True)
                 for index, amb in enumerate(song.ambtpls):
                     with open(
                         uaf_path / "audio" / "amb" / f"amb_{mapname}_{index}.tpl.ckd",

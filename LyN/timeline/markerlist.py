@@ -6,5 +6,5 @@ class Marker(XMLElement):
 
     position: XMLAttribute[int]
     name: XMLAttribute[str]
-    sampleposition: XMLAttribute[int]
+    sampleposition: XMLAttribute[float]
     date: XMLAttribute[float]

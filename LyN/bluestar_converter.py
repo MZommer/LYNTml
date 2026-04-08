@@ -1,5 +1,5 @@
-from .Timeline.layer import Instance, LyricsInstance, MoveInstance
-from .Timeline.timeline import Timeline
+from .timeline.layer import Instance, LyricsInstance, MoveInstance
+from .timeline.timeline import JustDanceToolLD
 
 
 def _index_resolver(name: str) -> int:
@@ -17,14 +17,14 @@ class BlueStarConverter:
     moves: tuple[list[dict[str, str | int]], ...] = [], [], [], []
     kinectmoves: tuple[list[dict[str, str | int]], ...] = [], [], [], []
 
-    def __init__(self, timeline: Timeline) -> None:
+    def __init__(self, timeline: JustDanceToolLD) -> None:
         self.timeline = timeline
         self.to_bluestar()
 
     def picto_instance_resolver(self, instance: Instance) -> dict[str, str | int]:
-        position_date = self.timeline.markerlist[instance.position].date
+        position_date = self.timeline.partition.markerlist[instance.position].date
         date = instance.date or position_date
-        duration = self.timeline.markerlist[instance.position + 1].date - date
+        duration = self.timeline.partition.markerlist[instance.position + 1].date - date
         return {
             "name": instance.model,
             "time": int(date * 1000),
@@ -32,11 +32,11 @@ class BlueStarConverter:
         }
 
     def move_instance_resolver(self, instance: MoveInstance) -> dict[str, str | int]:
-        position_date = self.timeline.markerlist[instance.position].date
+        position_date = self.timeline.partition.markerlist[instance.position].date
         date = instance.date or position_date
         duration = (
             instance.duration
-            or self.timeline.markerlist[
+            or self.timeline.partition.markerlist[
                 instance.position + instance.OffsetInSubdivisions
             ].date
             - date
@@ -51,7 +51,7 @@ class BlueStarConverter:
     def lyrics_instance_resolver(
         self, instance: LyricsInstance
     ) -> dict[str, str | int]:
-        position_date = self.timeline.markerlist[instance.position].date
+        position_date = self.timeline.partition.markerlist[instance.position].date
         date = position_date + instance.Offset
         duration = instance.Length
         text = instance.Text.replace("_", " ")
@@ -64,16 +64,18 @@ class BlueStarConverter:
         }
 
     def to_bluestar(self) -> None:
-        beats = sorted(marker.date * 1000 for marker in self.timeline.markerlist)
+        beats = sorted(
+            marker.date * 1000 for marker in self.timeline.partition.markerlist
+        )
         pictos = []
         lyrics = []
         karaoke = []
 
-        for layer in self.timeline.iter("Layer"):
+        for layer in self.timeline.partition.layers:
             if layer.type == "Move":
                 idx = _index_resolver(layer.name)
 
-                for instance in layer:
+                for instance in layer.instances:
                     clip = self.move_instance_resolver(instance)
 
                     if layer.name.lower().startswith("kinect"):
@@ -82,12 +84,12 @@ class BlueStarConverter:
                         self.moves[idx].append(clip)
 
             elif layer.type == "Picto":
-                for instance in layer:
+                for instance in layer.instances:
                     clip = self.picto_instance_resolver(instance)
                     pictos.append(clip)
 
             elif layer.type == "Lyrics":
-                for instance in layer:
+                for instance in layer.instances:
                     clip = self.lyrics_instance_resolver(instance)
                     if layer.name.lower().startswith("karaoke"):
                         karaoke.append(clip)
@@ -95,13 +97,13 @@ class BlueStarConverter:
                         lyrics.append(clip)
 
             elif layer.type == "Events":
-                for instance in layer:
+                for instance in layer.instances:
                     pass
 
         self.main = {
-            "MapName": self.timeline.general.Song,
+            "MapName": self.timeline.partition.general.Song,
             "Artist": "Unknown",
-            "Title": self.timeline.general.Song,
+            "Title": self.timeline.partition.general.Song,
             "NumCoach": len(tuple(move for move in self.moves if move)),
             "beats": beats,
             "goldEffects": [],
