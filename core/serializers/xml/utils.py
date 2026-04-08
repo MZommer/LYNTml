@@ -13,7 +13,6 @@ def parse_bool(raw: str) -> bool:
 
 
 def type_arg[T](annotation: type[T]) -> type[T]:
-    # TODO: Add typing??
     if not (args := get_args(annotation)):
         msg = f"Missing type parameter in {annotation!r}"
         raise TypeError(msg)
@@ -85,6 +84,8 @@ def to_str(value: Any, dtype: type) -> str:
     is_seq, _item_type = resolve_dtype(dtype)
     if is_seq:
         return SEQ_SEP.join(str(v) for v in value)
+    if issubclass(dtype, float) and not value % 1:
+        value = int(value)
     return str(value)
 
 

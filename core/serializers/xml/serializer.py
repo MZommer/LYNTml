@@ -45,7 +45,7 @@ class XMLSerializer:
     def to_et[T: XMLElement](self, element: T) -> ET.Element:
         """Serialize an XMLElement to an ET.Element tree."""
         el = ET.Element(element.tag)
-        hints = vars(type(element)).get("__annotations__", {})
+        hints = all_hints(type(element))  # includes inherited fields from all bases
 
         for field, ann in hints.items():
             origin = get_origin(ann)
@@ -72,6 +72,8 @@ class XMLSerializer:
                 if col:
                     for item in col:
                         el.append(self.to_et(item))  # no wrapper — direct siblings
+            elif issubclass(ann, XMLElement) or issubclass(origin, XMLElement):
+                ET.SubElement(el, field).append(self.to_et(element.__dict__.get(field)))
 
         return el
 

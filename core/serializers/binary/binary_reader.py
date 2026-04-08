@@ -109,8 +109,7 @@ class BinaryReader:
             minute=self.ushort(),
             hour=self.ushort(),
             second=self.ushort(),
-            microsecond=self.uint32()
-            * 1000,  # TODO: maybe? what else this 32 value could be
+            microsecond=self.uint32(),
         )
 
     def raw(self, size: int) -> bytes:

@@ -12,8 +12,10 @@ from LyN.timeline.databank import (
     Event,
     KinectMove,
     Move,
-    Param as BankParam,
     Picto,
+)
+from LyN.timeline.databank import (
+    Param as BankParam,
 )
 from LyN.timeline.general import General, ScoreStep
 from LyN.timeline.layer import (
@@ -84,10 +86,10 @@ class TimelineSerializer:
         song = self._reader.string8()
         general = General(
             Song=song,
-            BeatsPerMinute=self._reader.uint32(),
-            SampleFrequency=self._reader.uint32(),
             BeatsPerMeasure=self._reader.uint32(),
             FirstMeasureMarkerPos=self._reader.uint32(),
+            BeatsPerMinute=self._reader.uint32(),
+            SampleFrequency=self._reader.uint32(),
             WaveNbSamples=self._reader.uint32() if self.legacy else 0,
             CustomScoreSteps=bool(self._reader.uint32()),
             ScoreSteps=[
@@ -100,7 +102,6 @@ class TimelineSerializer:
             WavePath=self._reader.string8() or rf".\Sounds\{song}.wav",
             VideoPath=self._reader.string8() or rf".\{song}\Videos\{song}.bik",
             PictoFolder=r".\Pictos",
-            # TODO: check if the dates are serialized in legacy
             LastMoveChangeDate=self._reader.date().strftime("%d/%m/%Y %H:%M:%S"),
             LastClassifierChangeDate=self._reader.date().strftime("%d/%m/%Y %H:%M:%S"),
             LastPictoModelCreateDeleteDate=date,
