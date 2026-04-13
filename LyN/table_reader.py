@@ -2,10 +2,9 @@ from io import BytesIO
 
 from core.serializers.binary import BinaryReader, ByteOrder
 
-from .binary_unpacker import FileID
 
-
-def table_reader(data: bytes) -> tuple[tuple[FileID, ...], FileID]:
+def table_reader(data: bytes) -> tuple[tuple[int, ...], int]:
+    """Reads the table and returns the FileIDs of the classifiers and the timeline."""
     binary_reader = BinaryReader(ByteOrder.LITTLE, BytesIO(data))
 
     _size_of = binary_reader.uint32()
@@ -26,9 +25,7 @@ def table_reader(data: bytes) -> tuple[tuple[FileID, ...], FileID]:
 
     _files = binary_reader.ushort()
 
-    classifiers = tuple(
-        FileID(binary_reader.uint32()) for _ in range(binary_reader.uint32())
-    )
-    timeline = FileID(binary_reader.uint32())
+    classifiers = tuple(binary_reader.uint32() for _ in range(binary_reader.uint32()))
+    timeline = binary_reader.uint32()
 
     return classifiers, timeline

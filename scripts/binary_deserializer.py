@@ -2,7 +2,7 @@ from pathlib import Path
 
 from core.logger import logger
 from core.serializers.xml import XMLSerializer
-from LyN.binary_unpacker import Unpacker
+from LyN.binary_unpacker import Unpacker, save_file
 from LyN.bluestar_converter import BlueStarConverter
 from LyN.serializers.binary.timeline_serializer import TimelineSerializer
 from LyN.table_reader import table_reader
@@ -19,16 +19,16 @@ import shutil
 
 def unpack_and_decode(file: os.PathLike, output: os.PathLike) -> JustDanceToolLD:
     output = Path(output)
-    unpacker = Unpacker(file)
+    unpacker = Unpacker.from_path(file)
     _header, table, *files = unpacker.files
 
-    os.makedirs(output / "bin", exist_ok=True)
+    (output / "bin").mkdir(parents=True, exist_ok=True)
     for idx, file in enumerate(unpacker.files):
-        unpacker.save_file(file, output / "bin" / f"{idx}_{file.id}.{file.type}")
+        save_file(file, output / "bin" / f"{idx}_{file.id}.{file.type}")
 
-    classifiers_id, timeline_id = table_reader(table.data)
+    classifiers_ids, timeline_id = table_reader(table.data)
 
-    classifiers = tuple(file for file in files if file.id in classifiers_id)
+    classifiers = tuple(file for file in files if file.id in classifiers_ids)
     timeline_file = next(file for file in files if file.id == timeline_id)
 
     serializer = TimelineSerializer()
@@ -104,7 +104,7 @@ def main() -> None:
 
             for picto in timeline.partition.databank.PictoBank:
                 shutil.copy(
-                    f"./assets/Pictogram_{bluestar.main['NumCoach']}.png",
+                    f"./assets/Pictogram_{bluestar.main['NumCoach'] + 1}.png",
                     song_dir / "pictos" / f"{picto.name}.png",
                 )
 

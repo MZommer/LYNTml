@@ -1,4 +1,5 @@
 from enum import StrEnum
+from typing import Any
 
 from core.serializers.xml import (
     XMLAttribute,
@@ -68,7 +69,7 @@ class LyricsLayer(Layer, discriminator_value=LayerType.LYRICS):
 
 class Param(XMLElement):
     name: XMLAttribute[str]
-    value: XMLAttribute[str]
+    value: XMLAttribute[Any]
 
 
 class EventInstance(Instance):

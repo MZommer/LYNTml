@@ -1,4 +1,5 @@
 from abc import ABC
+from collections.abc import Sequence
 from typing import Any, get_args, get_origin
 
 
@@ -57,9 +58,11 @@ def resolve_dtype(dtype: type) -> tuple[bool, type]:
 def typecheck(value: Any, dtype: type, field: str = "") -> None:
     """Runtime type-check a value against dtype, supporting list[T]."""
     is_seq, item_type = resolve_dtype(dtype)
+    if item_type is Any:
+        return
     prefix = f"{field}: " if field else ""
     if is_seq:
-        if not isinstance(value, list):
+        if not isinstance(value, Sequence):
             raise TypeError(
                 f"{prefix}expected list[{item_type.__name__}],"
                 " got {type(value).__name__}"

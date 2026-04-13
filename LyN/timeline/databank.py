@@ -1,4 +1,4 @@
-from enum import IntEnum
+from enum import IntEnum, StrEnum
 
 from core.serializers.xml import (
     XMLAttribute,
@@ -45,11 +45,26 @@ class Move(BankEntry):
     CustomInts: XMLSubElement[list[int]]
 
 
+class ParamType(StrEnum):
+    STRING = "String"
+    INT = "Int"
+    FLOAT = "Float"
+
+
 class Param(XMLElement):
     name: XMLAttribute[str]
-    type: XMLAttribute[str]  # TODO: add resolver to dtype
+    type: XMLAttribute[ParamType]
     DisplayInTimeline: XMLAttribute[int]
     DefaultValue: XMLAttribute[str]
+
+
+PARAM_TO_TYPE = {
+    "Class": ParamType.STRING,
+    "BPM": ParamType.FLOAT,
+    "StartOffset": ParamType.FLOAT,
+    **{f"Delay_{i}": ParamType.FLOAT for i in range(0xFF)},
+    **{f"EveId_{i}": ParamType.INT for i in range(0xFF)},
+}
 
 
 class Event(BankEntry):

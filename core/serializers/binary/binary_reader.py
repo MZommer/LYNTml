@@ -27,7 +27,7 @@ class BinaryReader:
 
     def init_struct(self):
         seed = self.tell()
-        size_of = self.uint32()
+        size_of = self.uint32()  # Every struct is aligned
         return self.put_struct(seed, size_of)
 
     def put_struct(self, seed: int, size_of: int) -> StructInfo:

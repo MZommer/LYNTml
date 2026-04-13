@@ -1,17 +1,20 @@
 import datetime
 import struct
 from io import BytesIO
+from itertools import chain
 from typing import BinaryIO
 
 from core.logger import logger
 from core.serializers.binary import BinaryReader, ByteOrder
 from LyN.serializers.binary.helpers import lyn_struct
 from LyN.timeline.databank import (
+    PARAM_TO_TYPE,
     Banks,
     DataBank,
     Event,
     KinectMove,
     Move,
+    ParamType,
     Picto,
 )
 from LyN.timeline.databank import (
@@ -29,6 +32,9 @@ from LyN.timeline.layer import (
     MoveLayer,
     PictoLayer,
 )
+from LyN.timeline.layer import (
+    Param as InstanceParam,
+)
 from LyN.timeline.markerlist import Marker
 from LyN.timeline.timeline import JustDanceToolLD, Partition
 
@@ -40,7 +46,6 @@ class TimelineSerializer:
     version: int
 
     def __init__(self) -> None:
-        self.names = []
         self.beats: tuple[float, ...] = ()
 
     def deserialize(self, stream: BinaryIO | bytes) -> JustDanceToolLD:
@@ -68,7 +73,7 @@ class TimelineSerializer:
         general = self._deserialize_general()
         markers = self._deserialize_markers()
         databank = self._deserialize_data_bank()
-        layers = self._deserialize_layers()
+        layers = self._deserialize_layers(databank=databank)
         return JustDanceToolLD(
             version=self.version,
             partition=Partition(
@@ -132,7 +137,6 @@ class TimelineSerializer:
         for creation_id in range(self._reader.uint32()):
             entry = self._deserialize_bank(creation_id)
             databank.add_entry(entry)
-            self.names.append(entry.name)
         return databank
 
     @lyn_struct(trustable=True)
@@ -207,20 +211,19 @@ class TimelineSerializer:
             SubdivisionsInBeat=self._reader.uint32(),
         )
 
-        is_legacy = self.legacy
         try:
             while self._reader.tell() < struct_end:
                 param_name = self._reader.string8()
-                if param_name == "Class":
-                    is_legacy = True  # TODO: Check if this is necessary or if version can be trusted
-                if is_legacy:
-                    _ = self._reader.int32()  # legacy extra value, skipped
+                if param_name == "Class" or any(
+                    param for param in event.Params if param.name == "Class"
+                ):
+                    class_id = self._reader.int32()
 
                 # TODO: add handler with known param names
                 event.Params.append(
                     BankParam(
                         name=param_name,
-                        type="unknown",
+                        type=PARAM_TO_TYPE.get(param_name, ParamType.INT),
                         DisplayInTimeline=1,
                         DefaultValue="",
                     )
@@ -231,55 +234,68 @@ class TimelineSerializer:
         return event
 
     @lyn_struct
-    def _deserialize_layers(self) -> list[Layer]:
-        return [
-            self._deserialize_layer(position)
-            for position in range(self._reader.uint32())
-        ]
+    def _deserialize_layers(self, databank: DataBank) -> list[Layer]:
+        return list(
+            filter(
+                None,
+                (
+                    self._deserialize_layer(position, databank)
+                    for position in range(self._reader.uint32())
+                ),
+            )
+        )
 
     @lyn_struct
     def _deserialize_layer(
-        self, position: int
-    ) -> PictoLayer | MoveLayer | EventsLayer | LyricsLayer:
+        self, position: int, databank: DataBank
+    ) -> PictoLayer | MoveLayer | EventsLayer | LyricsLayer | None:
         bank = Banks(self._reader.uint32())
         logger.debug(f"Deserializing LAYER ({bank.name}={bank})")
         if bank == Banks.PICTO:
-            return self._deserialize_picto_layer(position)
+            return self._deserialize_picto_layer(position, databank)
         if bank in (Banks.MOVE, Banks.KINECTMOVE):
-            return self._deserialize_move_layer(position)
+            return self._deserialize_move_layer(position, databank)
         if bank == Banks.EVENT:
-            return self._deserialize_event_layer(position)
+            return self._deserialize_event_layer(position, databank)
         if bank == Banks.LYRICS:
             return self._deserialize_lyrics_layer(position)
-        logger.error(f"UNKNOWN BANK {bank=}")
+        logger.error(f"UNKNOWN BANK {bank=}. SKIPPING...")
 
-    def _deserialize_picto_layer(self, position: int) -> PictoLayer:
+    def _deserialize_picto_layer(self, position: int, databank: DataBank) -> PictoLayer:
         entries = self._reader.uint32()
         return PictoLayer(
             position=position,
             name=self._reader.string8(),
-            instances=[self._deserialize_picto_instance() for _ in range(entries)],
+            instances=[
+                self._deserialize_picto_instance(databank) for _ in range(entries)
+            ],
         )
 
     @lyn_struct
-    def _deserialize_picto_instance(self) -> Instance:
+    def _deserialize_picto_instance(self, databank: DataBank) -> Instance:
         logger.debug(f"Deserializing PICTO INSTANCE {self._reader.tell()}")
         bank = self._reader.uint32()
         if bank != Banks.PICTO:
             logger.warning(f"Foreign instance in PICTO layer. ({bank})")
         date = self._reader.float()  # Not serialized in Binary
         name_id = self._reader.uint32()
-        name = self.names[name_id]
-        position, _offset = self.get_virtual_position(
-            date
-        )  # Not serialized in XML (calculated through the position)
+        name = next(
+            (entry.name for entry in databank.PictoBank if entry.CreationId == name_id),
+            "",
+        )
+        if not name:
+            logger.warning(f"Picto instance {name_id=} is not in PictoBank.")
+        position, _offset = self.get_virtual_position(date)
+        # Not serialized in XML (calculated through the position)
         return Instance(
             position=position,
             model=name,
             date=date,
         )
 
-    def _deserialize_move_layer(self, position: int) -> MoveLayer | EventsLayer:
+    def _deserialize_move_layer(
+        self, position: int, databank: DataBank
+    ) -> MoveLayer | EventsLayer:
         entries = self._reader.uint32()
         name = self._reader.string8()
 
@@ -296,22 +312,33 @@ class TimelineSerializer:
             name=name,
         )
         for _ in range(entries):
-            layer.instances.append(self._deserialize_move_instance())
-            if self.legacy:
+            layer.instances.append(self._deserialize_move_instance(databank))
+            if self.legacy:  # Check? maybe struct size of is rounded up
                 self._reader.uint32()
                 self._reader.uint32()
                 # out of the sizeof struct but the next struct is shifted?
         return layer
 
     @lyn_struct
-    def _deserialize_move_instance(self) -> MoveInstance:
+    def _deserialize_move_instance(self, databank: DataBank) -> MoveInstance:
         logger.debug(f"Deserializing MOVE INSTANCE {self._reader.tell()}")
         bank = self._reader.uint32()
         if bank not in (Banks.MOVE, Banks.KINECTMOVE):
             logger.warning(f"Foreign instance in MOVE layer. ({bank})")
         date = self._reader.float()
         name_id = self._reader.uint32()
-        name = self.names[name_id]
+        name = next(
+            (
+                entry.name
+                for entry in chain(databank.MoveBank, databank.KinectMoveBank)
+                if entry.CreationId == name_id
+            ),
+            "",
+        )
+        if not name:
+            logger.warning(
+                f"Move instance {name_id=} is not in MoveBank or KinectMoveBank."
+            )
         duration = self._reader.float()
         gold_move = bool(self._reader.uint32())
 
@@ -328,23 +355,32 @@ class TimelineSerializer:
             GoldMove=gold_move,
         )
 
-    def _deserialize_event_layer(self, position: int) -> EventsLayer:
+    def _deserialize_event_layer(
+        self, position: int, databank: DataBank
+    ) -> EventsLayer:
         entries = self._reader.uint32()
         return EventsLayer(
             position=position,
             name=self._reader.string8(),
-            instances=[self._deserialize_event_instance() for _ in range(entries)],
+            instances=[
+                self._deserialize_event_instance(databank) for _ in range(entries)
+            ],
         )
 
     @lyn_struct
-    def _deserialize_event_instance(self) -> EventInstance:
+    def _deserialize_event_instance(self, databank: DataBank) -> EventInstance:
         logger.debug(f"Deserializing EVENT INSTANCE {self._reader.tell()}")
         bank = self._reader.uint32()
-        if bank != Banks.MOVE:
+        if bank != Banks.EVENT:
             logger.warning(f"Foreign instance in EVENT layer. ({bank})")
         date = self._reader.float()
         name_id = self._reader.uint32()
-        name = self.names[name_id]
+        bank = next(
+            (entry for entry in databank.EventsBank if entry.CreationId == name_id),
+            None,
+        )
+        if not bank:
+            logger.warning(f"Event instance {name_id=} is not in EventBank.")
         length = self._reader.float()
         self._reader.uint32()
         if self.legacy:
@@ -352,36 +388,27 @@ class TimelineSerializer:
         position, offset = self.get_virtual_position(date)
         event = EventInstance(
             position=position,
-            model=name,
+            model=bank.name,
             date=date,
             Offset=offset,
             Length=length,
             color="0x00000000",
         )
-        return event
-        # TODO: Finish porting event
-        for bank in self.timeline.partition.databank.find_bank(name):
-            if bank.tag != "Event":
-                continue
-            for idx, param in enumerate(bank.Params):
-                if param.type == "String":
-                    value = self._reader.string8()
-                    if param.name == "Class":
-                        self._reader.uint32()
-                        self._reader.uint32()
-                        # ???
-                elif param.type == "Float":
-                    value = self._reader.float()
-                else:
-                    value = self._reader.int32()
-                if idx == 0 and param.name != "Class":
-                    try:
-                        self._reader.uint32()
-                        self._reader.uint32()
-                    except struct.error:
-                        pass  # IDK the last instance doesn't have this
-                    # ???
-                event.AddParam(param.name, value)
+        for idx, param in enumerate(bank.Params):
+            if param.type == ParamType.STRING:
+                value = self._reader.string8()
+            elif param.type == ParamType.FLOAT:
+                value = self._reader.float()
+            else:  # Fallback Int
+                value = self._reader.int32()
+            if idx == 0 and param.name != "Class":
+                try:
+                    self._reader.uint32()
+                    self._reader.uint32()
+                except struct.error:
+                    pass  # IDK the last instance doesn't have this
+                # Probably alignment again
+            event.Params.append(InstanceParam(name=param.name, value=value))
         return event
 
     def _deserialize_lyrics_layer(self, position: int) -> LyricsLayer:
@@ -394,7 +421,7 @@ class TimelineSerializer:
 
     @lyn_struct(trustable=True)
     def _deserialize_lyrics_instance(self) -> LyricsInstance:
-        logger.debug("Deserializing LYRICS INSTANCE")
+        logger.debug(f"Deserializing LYRICS INSTANCE ({self._reader.tell()})")
         bank = self._reader.uint32()
         if bank != Banks.LYRICS:
             logger.warning(f"Foreign instance in LYRICS layer. ({bank})")
