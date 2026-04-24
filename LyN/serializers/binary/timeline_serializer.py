@@ -1,5 +1,4 @@
 import datetime
-import struct
 from io import BytesIO
 from itertools import chain
 from typing import BinaryIO
@@ -369,10 +368,10 @@ class TimelineSerializer:
 
     @lyn_struct
     def _deserialize_event_instance(self, databank: DataBank) -> EventInstance:
-        logger.debug(f"Deserializing EVENT INSTANCE {self._reader.tell()}")
-        bank = self._reader.uint32()
-        if bank != Banks.EVENT:
-            logger.warning(f"Foreign instance in EVENT layer. ({bank})")
+        logger.debug(f"Deserializing EVENT INSTANCE {self._reader.tell()}.")
+        bank_id = self._reader.uint32()
+        if bank_id != Banks.EVENT:
+            logger.warning(f"Foreign instance in EVENT layer. ({bank_id})")
         date = self._reader.float()
         name_id = self._reader.uint32()
         bank = next(
@@ -381,10 +380,22 @@ class TimelineSerializer:
         )
         if not bank:
             logger.warning(f"Event instance {name_id=} is not in EventBank.")
+        else:
+            logger.debug(
+                f"Deserializing event instance of bank {bank.name} ({bank.CreationId})"
+            )
         length = self._reader.float()
-        self._reader.uint32()
-        if self.legacy:
-            self._reader.uint32()
+        params = self._reader.uint32()
+        if not bank:
+            logger.warning(f"Bank ({bank_id=}) was not found.")
+        elif params != len(bank.Params):
+            logger.warning(
+                f"Mismatch of bank params {len(bank.Params)} with instance params {params}."
+            )
+        params_bank = self._reader.uint32()
+        if params_bank != Banks.EVENT:
+            logger.warning(f"Foreign param instances in EVENT layer. ({params_bank})")
+
         position, offset = self.get_virtual_position(date)
         event = EventInstance(
             position=position,
@@ -399,15 +410,11 @@ class TimelineSerializer:
                 value = self._reader.string8()
             elif param.type == ParamType.FLOAT:
                 value = self._reader.float()
+            elif param.type == ParamType.VECTOR:
+                value = self._reader.vector()
             else:  # Fallback Int
                 value = self._reader.int32()
-            if idx == 0 and param.name != "Class":
-                try:
-                    self._reader.uint32()
-                    self._reader.uint32()
-                except struct.error:
-                    pass  # IDK the last instance doesn't have this
-                # Probably alignment again
+            # Some instances have alignment?
             event.Params.append(InstanceParam(name=param.name, value=value))
         return event
 

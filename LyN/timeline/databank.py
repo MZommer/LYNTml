@@ -49,6 +49,7 @@ class ParamType(StrEnum):
     STRING = "String"
     INT = "Int"
     FLOAT = "Float"
+    VECTOR = "Vector"
 
 
 class Param(XMLElement):
@@ -60,8 +61,10 @@ class Param(XMLElement):
 
 PARAM_TO_TYPE = {
     "Class": ParamType.STRING,
-    "BPM": ParamType.FLOAT,
+    "BPM": ParamType.INT,
     "StartOffset": ParamType.FLOAT,
+    "Intensity": ParamType.FLOAT,
+    "AlphaBlending": ParamType.VECTOR,
     **{f"Delay_{i}": ParamType.FLOAT for i in range(0xFF)},
     **{f"EveId_{i}": ParamType.INT for i in range(0xFF)},
 }
