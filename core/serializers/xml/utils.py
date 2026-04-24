@@ -1,5 +1,5 @@
 from abc import ABC
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from typing import Any, get_args, get_origin
 
 
@@ -85,7 +85,7 @@ SEQ_SEP = ";"  # separator used for comma-separated sequences in XML
 def to_str(value: Any, dtype: type) -> str:
     """Encode a Python value to its XML text representation."""
     is_seq, _item_type = resolve_dtype(dtype)
-    if is_seq:
+    if is_seq or (isinstance(value, Iterable) and not isinstance(value, (str, bytes))):
         return SEQ_SEP.join(str(v) for v in value)
     if issubclass(dtype, float) and not value % 1:
         value = int(value)
