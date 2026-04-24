@@ -41,8 +41,8 @@ class BinaryReader:
     def vector(self, size: int | None = None) -> list[float]:
         return [self.float() for _ in range(size or self.uint32())]
 
-    def array[T](self, function: Callable[[], T]) -> list[T]:
-        return [function() for _ in range(self.uint32())]
+    def array[T](self, function: Callable[[], T], size: int | None = None) -> list[T]:
+        return [function() for _ in range(size or self.uint32())]
 
     def uint64(self) -> int:
         return struct.unpack(self.byte_order_marker + "Q", self.file_stream.read(8))[0]
@@ -78,10 +78,18 @@ class BinaryReader:
         return value
 
     def string4(self) -> str:
-        return self.file_stream.read(self.ushort()).strip(b"\x00").decode("utf-8")
+        return (
+            self.file_stream.read(self.ushort())
+            .decode("utf-8", errors="backslashreplace")
+            .strip("\x00")
+        )
 
     def string8(self) -> str:
-        return self.file_stream.read(self.uint32()).strip(b"\x00").decode("utf-8")
+        return (
+            self.file_stream.read(self.uint32())
+            .decode("utf-8", errors="backslashreplace")
+            .strip("\x00")
+        )
 
     def string16(self) -> str:
         size = self.ushort()
@@ -89,8 +97,8 @@ class BinaryReader:
         if is_utf16:
             string = (
                 self.file_stream.read(size)
-                .rstrip(b"\x00")
                 .decode("utf-16", "backslashreplace")
+                .rstrip("\x00")
             )
             # Try to decode errors in utf-8
             errors = string.split(r"\x")

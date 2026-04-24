@@ -63,7 +63,7 @@ class TimelineSerializer:
 
     @property
     def legacy(self) -> bool:
-        return self.version > LEGACY_VERSION
+        return self.version < LEGACY_VERSION
 
     # Reader functions #
     @lyn_struct
@@ -94,7 +94,7 @@ class TimelineSerializer:
             FirstMeasureMarkerPos=self._reader.uint32(),
             BeatsPerMinute=self._reader.uint32(),
             SampleFrequency=self._reader.uint32(),
-            WaveNbSamples=self._reader.uint32() if self.legacy else 0,
+            WaveNbSamples=self._reader.uint32(),
             CustomScoreSteps=bool(self._reader.uint32()),
             ScoreSteps=[
                 ScoreStep(
@@ -103,15 +103,22 @@ class TimelineSerializer:
                 )
                 for _ in range(self._reader.uint32())
             ],
-            WavePath=self._reader.string8() or rf".\Sounds\{song}.wav",
-            VideoPath=self._reader.string8() or rf".\{song}\Videos\{song}.bik",
+            WavePath=rf".\Sounds\{song}.wav",
+            VideoPath=rf".\{song}\Videos\{song}.bik",
             PictoFolder=r".\Pictos",
-            LastMoveChangeDate=self._reader.date().strftime("%d/%m/%Y %H:%M:%S"),
-            LastClassifierChangeDate=self._reader.date().strftime("%d/%m/%Y %H:%M:%S"),
+            LastMoveChangeDate=date,
+            LastClassifierChangeDate=date,
             LastPictoModelCreateDeleteDate=date,
         )
-
         logger.debug(f"Deserializing GENERAL {self.version=} {self.legacy=}")
+        if not self.legacy:
+            # 4 uint16 values ? sometimes with values and sometimes 00 00
+            # TODO: Investigate this values, probably some ids
+            self._reader.array(self._reader.ushort, 4)
+        general.LastMoveChangeDate = self._reader.date().strftime("%d/%m/%Y %H:%M:%S")
+        general.LastClassifierChangeDate = self._reader.date().strftime(
+            "%d/%m/%Y %H:%M:%S"
+        )
         return general
 
     @lyn_struct
@@ -392,10 +399,6 @@ class TimelineSerializer:
             logger.warning(
                 f"Mismatch of bank params {len(bank.Params)} with instance params {params}."
             )
-        params_bank = self._reader.uint32()
-        if params_bank != Banks.EVENT:
-            logger.warning(f"Foreign param instances in EVENT layer. ({params_bank})")
-
         position, offset = self.get_virtual_position(date)
         event = EventInstance(
             position=position,
@@ -405,6 +408,12 @@ class TimelineSerializer:
             Length=length,
             color="0x00000000",
         )
+        if params == 0:
+            return event
+        params_bank = self._reader.uint32()
+        if params_bank != Banks.EVENT:
+            logger.warning(f"Foreign param instances in EVENT layer. ({params_bank})")
+
         for idx, param in enumerate(bank.Params):
             if param.type == ParamType.STRING:
                 value = self._reader.string8()
@@ -426,7 +435,7 @@ class TimelineSerializer:
             instances=[self._deserialize_lyrics_instance() for _ in range(entries)],
         )
 
-    @lyn_struct(trustable=True)
+    @lyn_struct
     def _deserialize_lyrics_instance(self) -> LyricsInstance:
         logger.debug(f"Deserializing LYRICS INSTANCE ({self._reader.tell()})")
         bank = self._reader.uint32()

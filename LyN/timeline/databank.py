@@ -61,7 +61,7 @@ class Param(XMLElement):
 
 PARAM_TO_TYPE = {
     "Class": ParamType.STRING,
-    "BPM": ParamType.INT,
+    "BPM": ParamType.FLOAT,
     "StartOffset": ParamType.FLOAT,
     "Intensity": ParamType.FLOAT,
     "AlphaBlending": ParamType.VECTOR,
