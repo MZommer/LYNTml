@@ -10,7 +10,8 @@ def parse_bool(raw: str) -> bool:
         case "false" | "0" | "no":
             return False
         case _:
-            raise ValueError(f"Cannot convert {raw!r} to bool")
+            msg = f"Cannot convert {raw!r} to bool"
+            raise ValueError(msg)
 
 
 def type_arg[T](annotation: type[T]) -> type[T]:
@@ -63,20 +64,21 @@ def typecheck(value: Any, dtype: type, field: str = "") -> None:
     prefix = f"{field}: " if field else ""
     if is_seq:
         if not isinstance(value, Sequence):
-            raise TypeError(
+            msg = (
                 f"{prefix}expected list[{item_type.__name__}],"
                 " got {type(value).__name__}"
             )
+            raise TypeError(msg)
         for i, v in enumerate(value):
             if not isinstance(v, item_type):
-                raise TypeError(
+                msg = (
                     f"{prefix}list item [{i}]: expected {item_type.__name__}, "
                     f"got {type(v).__name__}"
                 )
+                raise TypeError(msg)
     elif not isinstance(value, dtype):
-        raise TypeError(
-            f"{prefix}expected {dtype.__name__}, got {type(value).__name__}"
-        )
+        msg = f"{prefix}expected {dtype.__name__}, got {type(value).__name__}"
+        raise TypeError(msg)
 
 
 SEQ_SEP = ";"  # separator used for comma-separated sequences in XML

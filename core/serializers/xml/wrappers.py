@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from dataclasses import dataclass
 
 from .utils import to_str
@@ -46,7 +47,7 @@ class CollectionValue[T]:
         for item in items:
             self.append(item)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[T]:
         return iter(self._items)
 
     def __len__(self) -> int:

@@ -10,6 +10,13 @@ from .descriptors import (
 from .utils import all_hints, is_descriptor
 
 
+def _is_collection(annotation: object) -> bool:
+    return get_origin(annotation) in (
+        XMLElementCollection,
+        XMLSiblingCollection,
+    ) or annotation in (XMLElementCollection, XMLSiblingCollection)
+
+
 def _make_init(
     hints: dict,
     defaults: dict,
@@ -25,21 +32,16 @@ def _make_init(
 
     All assignments route through descriptors -> type-checking is free.
     """
-    is_collection = lambda ann: (
-        get_origin(ann) in (XMLElementCollection, XMLSiblingCollection)
-        or ann in (XMLElementCollection, XMLSiblingCollection)
+    required = (
+        (n, a)
+        for n, a in hints.items()
+        if n not in defaults and not _is_collection(a) and n != disc_field
     )
-
-    required = [
+    optional = (
         (n, a)
         for n, a in hints.items()
-        if n not in defaults and not is_collection(a) and n != disc_field
-    ]
-    optional = [
-        (n, a)
-        for n, a in hints.items()
-        if (n in defaults or is_collection(a)) and n != disc_field
-    ]
+        if (n in defaults or _is_collection(a)) and n != disc_field
+    )
 
     params = ["self"]
     body_lines = []
@@ -55,7 +57,7 @@ def _make_init(
     for name, ann in optional:
         has_default = name in defaults
 
-        if is_collection(ann):
+        if _is_collection(ann):
             params.append(f"{name}=None")
             if has_default:
                 body_lines.append(
@@ -142,10 +144,11 @@ class XMLElement(ABC):
                 None,
             )
             if root is None:
-                raise TypeError(
+                msg = (
                     f"{cls.__name__}: discriminator_value given but no discriminator "
                     f"root found in MRO — did you forget discriminator='...' on the base?"
                 )
+                raise TypeError(msg)
             root._discriminator_registry[discriminator_value] = cls
             cls._discriminator_value = discriminator_value
 

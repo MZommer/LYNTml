@@ -2,7 +2,8 @@ import struct
 from collections.abc import Callable
 from datetime import datetime
 from enum import StrEnum
-from typing import BinaryIO
+from types import TracebackType
+from typing import BinaryIO, Self
 
 
 class ByteOrder(StrEnum):
@@ -17,7 +18,8 @@ class BinaryReader:
         elif byte_order == ByteOrder.BIG:
             self.byte_order_marker = ">"
         else:
-            raise ValueError(f"Unsupported byte order: {byte_order}")
+            msg = f"Unsupported byte order: {byte_order}"
+            raise ValueError(msg)
         self.byte_order = byte_order
         self.file_stream = file_stream
 
@@ -51,7 +53,7 @@ class BinaryReader:
     def byte(self) -> int:
         return struct.unpack(self.byte_order_marker + "b", self.file_stream.read(1))[0]
 
-    def bool(self) -> bool:
+    def bbool(self) -> bool:
         return struct.unpack(self.byte_order_marker + "?", self.file_stream.read(1))[0]
 
     def float(self, round_value: bool = True) -> float:
@@ -118,10 +120,15 @@ class BinaryReader:
     def __del__(self) -> None:
         self.close()
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         self.close()
 
     def __repr__(self) -> str:
