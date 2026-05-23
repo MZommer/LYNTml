@@ -5,7 +5,7 @@ from typing import BinaryIO
 
 from core.logger import logger
 from core.serializers.binary import BinaryReader, ByteOrder
-from LyN.serializers.binary.helpers import lyn_struct
+from LyN.serializers.binary.helpers import StructInfo, lyn_struct
 from LyN.timeline.databank import (
     PARAM_TO_TYPE,
     Banks,
@@ -141,12 +141,14 @@ class TimelineSerializer:
     def _deserialize_data_bank(self) -> DataBank:
         databank = DataBank()
         for creation_id in range(self._reader.uint32()):
-            entry = self._deserialize_bank(creation_id)
-            databank.add_entry(entry)
+            if entry := self._deserialize_bank(creation_id):
+                databank.add_entry(entry)
         return databank
 
     @lyn_struct(trustable=True)
-    def _deserialize_bank(self, creation_id: int) -> Picto | Move | Event | KinectMove:
+    def _deserialize_bank(
+        self, creation_id: int, struct: StructInfo
+    ) -> None | Picto | Move | Event | KinectMove:
         bank = self._reader.uint32()
         name = self._reader.string8()
         logger.debug(f"Deserializing BANK {name} ({Banks(bank).name})")
@@ -202,13 +204,14 @@ class TimelineSerializer:
                 ScoringMode=self._reader.uint32(),
             )
         elif bank == Banks.EVENT:
-            return self._deserialize_event(name, creation_id)
+            return self._deserialize_event(name, creation_id, struct)
         else:
             logger.warning(f"UNKNOWN DATABANK {bank=}")
 
-    def _deserialize_event(self, name: str, creation_id: int) -> Event:
-        current_struct = self._reader.get_struct()
-        struct_end = current_struct.seed + current_struct.size_of
+    def _deserialize_event(
+        self, name: str, creation_id: int, struct: StructInfo
+    ) -> Event:
+        struct_end = struct.seed + struct.size_of
 
         event = Event(
             name=name,

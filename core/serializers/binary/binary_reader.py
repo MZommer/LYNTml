@@ -1,16 +1,8 @@
 import struct
 from collections.abc import Callable
-from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
-from queue import LifoQueue
 from typing import BinaryIO
-
-
-@dataclass
-class StructInfo:
-    seed: int
-    size_of: int
 
 
 class ByteOrder(StrEnum):
@@ -20,23 +12,14 @@ class ByteOrder(StrEnum):
 
 class BinaryReader:
     def __init__(self, byte_order: ByteOrder, file_stream: BinaryIO) -> None:
-        self.stack: LifoQueue[object] = LifoQueue()
-        self.byte_order_marker = "<" if byte_order == ByteOrder.LITTLE else ">"
-        self.byte_order = ByteOrder
+        if byte_order == ByteOrder.LITTLE:
+            self.byte_order_marker = "<"
+        elif byte_order == ByteOrder.BIG:
+            self.byte_order_marker = ">"
+        else:
+            raise ValueError(f"Unsupported byte order: {byte_order}")
+        self.byte_order = byte_order
         self.file_stream = file_stream
-
-    def init_struct(self):
-        seed = self.tell()
-        size_of = self.uint32()  # Every struct is aligned
-        return self.put_struct(seed, size_of)
-
-    def put_struct(self, seed: int, size_of: int) -> StructInfo:
-        info = StructInfo(seed, size_of)
-        self.stack.put(info)
-        return info
-
-    def get_struct(self):
-        return self.stack.get()
 
     def vector(self, size: int | None = None) -> list[float]:
         return [self.float() for _ in range(size or self.uint32())]

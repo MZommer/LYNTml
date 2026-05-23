@@ -1,15 +1,36 @@
+import inspect
 from collections.abc import Callable
+from dataclasses import dataclass
 from functools import wraps
 
 from core.logger import logger
 
 
+@dataclass(slots=True)
+class StructInfo:
+    seed: int
+    size_of: int
+
+
 # Decorator
 def lyn_struct(_func: Callable | None = None, *, trustable: bool = False) -> Callable:
     def decorator(func: Callable) -> Callable:
+        signature = inspect.signature(func)
+        accepts_struct = "struct" in signature.parameters or any(
+            p.kind == inspect.Parameter.VAR_KEYWORD
+            for p in signature.parameters.values()
+        )
+
         @wraps(func)
-        def wrapper(self, *args, **kwargs):
-            struct = self._reader.init_struct()
+        def wrapper(self: "TimelineSerializer", *args, **kwargs):
+            seed = self._reader.tell()
+            size_of = self._reader.uint32()  # Every struct is aligned
+            struct = StructInfo(
+                seed=seed,
+                size_of=size_of,
+            )
+            if accepts_struct:
+                kwargs["struct"] = struct
             try:
                 ret = func(self, *args, **kwargs)
             except Exception:
