@@ -5,8 +5,8 @@ from typing import BinaryIO
 
 from core.logger import logger
 from core.serializers.binary import BinaryReader, ByteOrder
-from LyN.serializers.binary.helpers import StructInfo, lyn_struct
-from LyN.timeline.databank import (
+from lyn.serializers.binary.helpers import StructInfo, lyn_struct
+from lyn.timeline.databank import (
     PARAM_TO_TYPE,
     Banks,
     DataBank,
@@ -16,11 +16,11 @@ from LyN.timeline.databank import (
     ParamType,
     Picto,
 )
-from LyN.timeline.databank import (
+from lyn.timeline.databank import (
     Param as BankParam,
 )
-from LyN.timeline.general import General, ScoreStep
-from LyN.timeline.layer import (
+from lyn.timeline.general import General, ScoreStep
+from lyn.timeline.layer import (
     EventInstance,
     EventsLayer,
     Instance,
@@ -31,11 +31,11 @@ from LyN.timeline.layer import (
     MoveLayer,
     PictoLayer,
 )
-from LyN.timeline.layer import (
+from lyn.timeline.layer import (
     Param as InstanceParam,
 )
-from LyN.timeline.markerlist import Marker
-from LyN.timeline.timeline import JustDanceToolLD, Partition
+from lyn.timeline.markerlist import Marker
+from lyn.timeline.timeline import JustDanceToolLD, Partition
 
 LEGACY_VERSION = 9
 
@@ -86,7 +86,7 @@ class TimelineSerializer:
     @lyn_struct
     def _deserialize_general(self) -> General:
         date = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-        self.version = self._reader.float()
+        self.version = self._reader.float32()
         song = self._reader.string8()
         general = General(
             Song=song,
@@ -128,8 +128,8 @@ class TimelineSerializer:
         markers = tuple(
             Marker(
                 position=position,
-                sampleposition=self._reader.float(),
-                date=self._reader.float(),
+                sampleposition=self._reader.float32(),
+                date=self._reader.float32(),
                 name=self._reader.string8(),
             )
             for position in range(self._reader.uint32())
@@ -166,11 +166,11 @@ class TimelineSerializer:
                 duration=2.0,
                 SubdivisionsInBeat=2,
                 color="0x00000000",  # Not serialized data?
-                livemovemul=self._reader.float(),
-                livemoveplus=self._reader.float(),
-                Slack=self._reader.float(),
-                Capacity=self._reader.float(),
-                Stability=self._reader.float(),
+                livemovemul=self._reader.float32(),
+                livemoveplus=self._reader.float32(),
+                Slack=self._reader.float32(),
+                Capacity=self._reader.float32(),
+                Stability=self._reader.float32(),
                 GoldenMove=bool(self._reader.uint32()),
                 EnergyEvaluation=bool(self._reader.uint32()),
                 TimingEvaluation=bool(self._reader.uint32()),
@@ -186,11 +186,11 @@ class TimelineSerializer:
                 duration=2.0,
                 SubdivisionsInBeat=2,
                 color="0x00000000",  # Not serialized data?
-                gesturemul=self._reader.float(),
-                gestureplus=self._reader.float(),
-                Slack=self._reader.float(),
-                Capacity=self._reader.float(),
-                Stability=self._reader.float(),
+                gesturemul=self._reader.float32(),
+                gestureplus=self._reader.float32(),
+                Slack=self._reader.float32(),
+                Capacity=self._reader.float32(),
+                Stability=self._reader.float32(),
                 GoldenMove=bool(self._reader.uint32()),
                 EnergyEvaluation=bool(self._reader.uint32()),
                 TimingEvaluation=bool(self._reader.uint32()),
@@ -198,15 +198,16 @@ class TimelineSerializer:
                 CustomInts=self._reader.array(
                     self._reader.uint32
                 ),  # TODO: Check int size
-                ScoreOffset=self._reader.float(),
-                ScoreScale=self._reader.float(),
-                ScoreSmooth=self._reader.float(),
+                ScoreOffset=self._reader.float32(),
+                ScoreScale=self._reader.float32(),
+                ScoreSmooth=self._reader.float32(),
                 ScoringMode=self._reader.uint32(),
             )
         elif bank == Banks.EVENT:
             return self._deserialize_event(name, creation_id, struct)
         else:
             logger.warning(f"UNKNOWN DATABANK {bank=}")
+            return None
 
     def _deserialize_event(
         self, name: str, creation_id: int, struct: StructInfo
@@ -226,7 +227,7 @@ class TimelineSerializer:
                 if param_name == "Class" or any(
                     param for param in event.Params if param.name == "Class"
                 ):
-                    class_id = self._reader.int32()
+                    _class_id = self._reader.int32()
 
                 # TODO: add handler with known param names
                 event.Params.append(
@@ -269,6 +270,7 @@ class TimelineSerializer:
         if bank == Banks.LYRICS:
             return self._deserialize_lyrics_layer(position)
         logger.error(f"UNKNOWN BANK {bank=}. SKIPPING...")
+        return None
 
     def _deserialize_picto_layer(self, position: int, databank: DataBank) -> PictoLayer:
         entries = self._reader.uint32()
@@ -286,7 +288,7 @@ class TimelineSerializer:
         bank = self._reader.uint32()
         if bank != Banks.PICTO:
             logger.warning(f"Foreign instance in PICTO layer. ({bank})")
-        date = self._reader.float()  # Not serialized in Binary
+        date = self._reader.float32()  # Not serialized in Binary
         name_id = self._reader.uint32()
         name = next(
             (entry.name for entry in databank.PictoBank if entry.CreationId == name_id),
@@ -315,7 +317,7 @@ class TimelineSerializer:
                 name=name,
             )
         # TODO: Add Storyboard parser
-        # TODO: Check LyN code to find StoryboardLayer/Bank
+        # TODO: Check lyn code to find StoryboardLayer/Bank
         layer = MoveLayer(
             position=position,
             name=name,
@@ -334,7 +336,7 @@ class TimelineSerializer:
         bank = self._reader.uint32()
         if bank not in (Banks.MOVE, Banks.KINECTMOVE):
             logger.warning(f"Foreign instance in MOVE layer. ({bank})")
-        date = self._reader.float()
+        date = self._reader.float32()
         name_id = self._reader.uint32()
         name = next(
             (
@@ -348,7 +350,7 @@ class TimelineSerializer:
             logger.warning(
                 f"Move instance {name_id=} is not in MoveBank or KinectMoveBank."
             )
-        duration = self._reader.float()
+        duration = self._reader.float32()
         gold_move = bool(self._reader.uint32())
 
         position, _offset = self.get_virtual_position(date)
@@ -382,7 +384,7 @@ class TimelineSerializer:
         bank_id = self._reader.uint32()
         if bank_id != Banks.EVENT:
             logger.warning(f"Foreign instance in EVENT layer. ({bank_id})")
-        date = self._reader.float()
+        date = self._reader.float32()
         name_id = self._reader.uint32()
         bank = next(
             (entry for entry in databank.EventsBank if entry.CreationId == name_id),
@@ -394,7 +396,7 @@ class TimelineSerializer:
             logger.debug(
                 f"Deserializing event instance of bank {bank.name} ({bank.CreationId})"
             )
-        length = self._reader.float()
+        length = self._reader.float32()
         params = self._reader.uint32()
         if not bank:
             logger.warning(f"Bank ({bank_id=}) was not found.")
@@ -417,11 +419,11 @@ class TimelineSerializer:
         if params_bank != Banks.EVENT:
             logger.warning(f"Foreign param instances in EVENT layer. ({params_bank})")
 
-        for idx, param in enumerate(bank.Params):
+        for param in bank.Params:
             if param.type == ParamType.STRING:
                 value = self._reader.string8()
             elif param.type == ParamType.FLOAT:
-                value = self._reader.float()
+                value = self._reader.float32()
             elif param.type == ParamType.VECTOR:
                 value = self._reader.vector()
             else:  # Fallback Int
@@ -444,8 +446,8 @@ class TimelineSerializer:
         bank = self._reader.uint32()
         if bank != Banks.LYRICS:
             logger.warning(f"Foreign instance in LYRICS layer. ({bank})")
-        date = self._reader.float()
-        length = self._reader.float()
+        date = self._reader.float32()
+        length = self._reader.float32()
         text = self._reader.string16().encode("utf-8").decode("utf-8")
         # recode from UTF-16 to UTF-8
         position, offset = self.get_virtual_position(date)

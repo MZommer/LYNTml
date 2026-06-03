@@ -34,6 +34,7 @@ class XMLSerializer:
 
     def __init__(
         self,
+        *,
         indent: str = DEFAULT_INDENT,
         encoding: str = DEFAULT_ENCODING,
         xml_declaration: bool = True,

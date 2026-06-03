@@ -10,17 +10,11 @@ def table_reader(data: bytes) -> tuple[tuple[int, ...], int]:
     _size_of = binary_reader.uint32()
 
     unk0 = binary_reader.uint32()
-    if unk0 != 8197:
-        msg = "Unexpected value for unk0"
-        raise Exception(msg)
+    assert unk0 == 8197, "Unexpected value for unk0"
     unk1 = binary_reader.uint32()
-    if unk1 != 4294901761:
-        msg = "Unexpected value for unk1"
-        raise Exception(msg)
+    assert unk1 == 4294901761, "Unexpected value for unk1"
     unk2 = binary_reader.uint32()
-    if unk2 != 77:
-        msg = "Unexpected value for unk2"
-        raise Exception(msg)
+    assert unk2 == 77, "Unexpected value for unk2"
     # I think this are all int16 values
 
     _files = binary_reader.ushort()

@@ -1,6 +1,6 @@
 import logging
 
-logger = logging.getLogger("LyN")
+logger = logging.getLogger("lyn")
 
 logger.setLevel(logging.DEBUG)
 

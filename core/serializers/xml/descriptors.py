@@ -74,12 +74,14 @@ class XMLAttribute[T]:
 
 
 class XMLElementCollection[T]:
-    """Wrapped collection — children live inside a container tag
-    example:
+    """Wrapped collection — children live inside a container tag.
+
+    Example:
         <ScoreSteps>
             <ScoreStep Name="X" Value="1" />
             <ScoreStep Name="OK" Value="25" />
         </ScoreSteps>.
+
     """
 
     def __set_name__(self, _owner: type[Any], name: str) -> None:
@@ -120,8 +122,9 @@ class XMLElementCollection[T]:
 
 class XMLSiblingCollection[T]:
     """Unwrapped sibling collection — children are emitted directly at the
-    parent level, with no container tag, identified only by their tag name:
+    parent level, with no container tag, identified only by their tag name.
 
+    Example:
         <Layer name="Moves1"     type="Move"   position="0" />
         <Layer name="KinectMoves1" type="Move" position="1" />
         <Layer name="Events_23"  type="Events" position="2" />
@@ -132,6 +135,7 @@ class XMLSiblingCollection[T]:
 
     The XML tag searched/emitted is item_type().tag (i.e. the class name by
     default, or whatever .tag returns).
+
     """
 
     def __set_name__(self, _owner: type[Any], name: str) -> None:

@@ -24,7 +24,7 @@ class BinaryReader:
         self.file_stream = file_stream
 
     def vector(self, size: int | None = None) -> list[float]:
-        return [self.float() for _ in range(size or self.uint32())]
+        return [self.float32() for _ in range(size or self.uint32())]
 
     def array[T](self, function: Callable[[], T], size: int | None = None) -> list[T]:
         return [function() for _ in range(size or self.uint32())]
@@ -56,7 +56,7 @@ class BinaryReader:
     def bbool(self) -> bool:
         return struct.unpack(self.byte_order_marker + "?", self.file_stream.read(1))[0]
 
-    def float(self, round_value: bool = True) -> float:
+    def float32(self, *, round_value: bool = True) -> float:
         value = struct.unpack(self.byte_order_marker + "f", self.file_stream.read(4))[0]
         if round_value:
             value = round(value, 7)

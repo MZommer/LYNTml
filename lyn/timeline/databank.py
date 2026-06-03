@@ -118,4 +118,4 @@ class DataBank(XMLElement):
         elif isinstance(entry, KinectMove):
             self.KinectMoveBank.append(entry)
         else:
-            raise ValueError(f"Unknown data bank entry of type {type(entry)}")
+            raise TypeError(f"Unknown data bank entry of type {type(entry)}")

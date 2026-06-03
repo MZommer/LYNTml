@@ -53,6 +53,12 @@ ignore = [
     "ISC001", # Conflicts with formatter
     "TD002", # Prevents authorless TODO comments, which is annoying
     "PTH", # Force PathLib
+    "S314", # Use 'defusedxml' instead of ET
+    "C901", # Function 'too complex' (lines)
+    "TD003", # No issue link for TODO
+    "S101", # Use of assert
+    "INP001", # Inplicit namespace package
+    "PLR0912", # Too many branches
 ]
 
 [tool.pyrefly]

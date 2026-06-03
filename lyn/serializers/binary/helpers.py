@@ -13,8 +13,10 @@ class StructInfo:
 
 
 # Decorator
-def lyn_struct(_func: Callable | None = None, *, trustable: bool = False) -> Callable:
-    def decorator(func: Callable) -> Callable:
+def lyn_struct[AT, RT](
+    _func: Callable[AT, RT] | None = None, *, trustable: bool = False
+) -> Callable[AT, RT | None]:
+    def decorator(func: Callable[AT, RT]) -> Callable[AT, RT]:
         signature = inspect.signature(func)
         accepts_struct = "struct" in signature.parameters or any(
             p.kind == inspect.Parameter.VAR_KEYWORD
@@ -22,7 +24,7 @@ def lyn_struct(_func: Callable | None = None, *, trustable: bool = False) -> Cal
         )
 
         @wraps(func)
-        def wrapper(self: "TimelineSerializer", *args, **kwargs):
+        def wrapper(self: "TimelineSerializer", *args, **kwargs) -> RT | None:
             seed = self._reader.tell()
             size_of = self._reader.uint32()  # Every struct is aligned
             struct = StructInfo(

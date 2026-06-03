@@ -4,10 +4,10 @@ import shutil
 from pathlib import Path
 
 from core.logger import logger
-from LyN.binary_unpacker import Unpacker
-from LyN.serializers.binary.timeline_serializer import TimelineSerializer
-from LyN.table_reader import table_reader
-from LyN.timeline.timeline import JustDanceToolLD
+from lyn.binary_unpacker import Unpacker
+from lyn.serializers.binary.timeline_serializer import TimelineSerializer
+from lyn.table_reader import table_reader
+from lyn.timeline.timeline import JustDanceToolLD
 
 logger.setLevel(logging.ERROR)
 
@@ -20,8 +20,7 @@ def unpack_and_decode(file: os.PathLike) -> JustDanceToolLD:
     timeline_file = next(file for file in files if file.id == timeline_id)
 
     serializer = TimelineSerializer()
-    timeline = serializer.deserialize(timeline_file.data)
-    return timeline
+    return serializer.deserialize(timeline_file.data)
 
 
 def main() -> None:
@@ -40,7 +39,7 @@ def main() -> None:
             shutil.copy(
                 file, output_dir / f"({timeline.partition.general.Song}){file.name}"
             )
-            print("Found", timeline.partition.general.Song, file.name)
+            logger.info("Found %a %a", timeline.partition.general.Song, file.name)
         except Exception:
             shutil.copy(file, error_dir / file.name)
 

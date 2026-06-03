@@ -21,7 +21,7 @@ def type_arg[T](annotation: type[T]) -> type[T]:
     return args[0]
 
 
-def is_descriptor(obj: Any) -> bool:
+def is_descriptor[T](obj: T) -> bool:
     return hasattr(type(obj), "__set__") or hasattr(type(obj), "__get__")
 
 
@@ -29,6 +29,7 @@ def all_hints(cls: type) -> dict:
     """Collect annotations from cls and all its XMLElement bases in MRO order,
     with subclass annotations taking precedence (subclass appears earlier in MRO,
     so we iterate reversed to let later entries overwrite earlier ones).
+
     Stops at — and excludes — XMLElement itself so framework internals are never
     included in field hints.
     """
@@ -56,7 +57,7 @@ def resolve_dtype(dtype: type) -> tuple[bool, type]:
     return False, dtype
 
 
-def typecheck(value: Any, dtype: type, field: str = "") -> None:
+def typecheck(value: object, dtype: type, field: str = "") -> None:
     """Runtime type-check a value against dtype, supporting list[T]."""
     is_seq, item_type = resolve_dtype(dtype)
     if item_type is Any:
@@ -84,7 +85,7 @@ def typecheck(value: Any, dtype: type, field: str = "") -> None:
 SEQ_SEP = ";"  # separator used for comma-separated sequences in XML
 
 
-def to_str(value: Any, dtype: type) -> str:
+def to_str(value: object, dtype: type) -> str:
     """Encode a Python value to its XML text representation."""
     is_seq, _item_type = resolve_dtype(dtype)
     if is_seq or (isinstance(value, Iterable) and not isinstance(value, (str, bytes))):
@@ -94,17 +95,17 @@ def to_str(value: Any, dtype: type) -> str:
     return str(value)
 
 
-def from_str(raw: str, dtype: type) -> Any:
+def from_str[T](raw: str, dtype: type[T]) -> T:
     """Decode an XML text value to the Python type described by dtype."""
     is_seq, item_type = resolve_dtype(dtype)
     if is_seq:
         if not raw.strip():
             return []
         return [from_scalar(part.strip(), item_type) for part in raw.split(SEQ_SEP)]
-    return from_scalar(raw, dtype)
+    return from_scalar(raw, item_type)
 
 
-def from_scalar(raw: str, dtype: type) -> Any:
+def from_scalar[T](raw: str, dtype: type[T]) -> T:
     """Decode a single scalar string to dtype."""
     if dtype is bool:
         return parse_bool(raw)

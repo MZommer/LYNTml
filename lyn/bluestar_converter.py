@@ -1,4 +1,4 @@
-from .timeline.layer import Instance, LyricsInstance, MoveInstance
+from .timeline.layer import Instance, LayerType, LyricsInstance, MoveInstance
 from .timeline.timeline import JustDanceToolLD
 
 
@@ -72,7 +72,7 @@ class BlueStarConverter:
         karaoke = []
 
         for layer in self.timeline.partition.layers:
-            if layer.type == "Move":
+            if layer.type == LayerType.MOVE:
                 idx = _index_resolver(layer.name)
 
                 for instance in layer.instances:
@@ -83,12 +83,12 @@ class BlueStarConverter:
                     else:
                         self.moves[idx].append(clip)
 
-            elif layer.type == "Picto":
+            elif layer.type == LayerType.PICTO:
                 for instance in layer.instances:
                     clip = self.picto_instance_resolver(instance)
                     pictos.append(clip)
 
-            elif layer.type == "Lyrics":
+            elif layer.type == LayerType.LYRICS:
                 for instance in layer.instances:
                     clip = self.lyrics_instance_resolver(instance)
                     if layer.name.lower().startswith("karaoke"):
@@ -96,8 +96,8 @@ class BlueStarConverter:
                     else:
                         lyrics.append(clip)
 
-            elif layer.type == "Events":
-                for instance in layer.instances:
+            elif layer.type == LayerType.EVENTS:
+                for _instance in layer.instances:
                     pass
 
         self.main = {
